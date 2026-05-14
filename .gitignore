@@ -39,3 +39,4 @@ Thumbs.db
 coverage/
 public/uploads/
 tsconfig.tsbuildinfo
+.vercel
