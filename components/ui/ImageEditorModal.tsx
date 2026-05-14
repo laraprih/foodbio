@@ -81,7 +81,7 @@ export default function ImageEditorModal({ file, onConfirm, onClose }: ImageEdit
       // Note: progress callback intentionally omitted — it fires hundreds of
       // times per second and would flood React with state updates.
       const result = await removeBackground(cropped, {
-        model: 'small',
+        model: 'isnet_quint8',
         output: { format: 'image/png', quality: 0.9 },
       })
 
