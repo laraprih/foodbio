@@ -1,14 +1,13 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { ArrowLeft, UserPlus, Eye, EyeOff } from 'lucide-react'
 
 export default function CadastroPage() {
   const { slug } = useParams<{ slug: string }>()
-  const router = useRouter()
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' })
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
@@ -36,10 +35,9 @@ export default function CadastroPage() {
       // Auto-login
       const login = await signIn('credentials', { email: form.email, password: form.password, slug, redirect: false })
       if (login?.error) {
-        router.push(`/${slug}/login`)
+        window.location.href = `/${slug}/login`
       } else {
-        router.push(`/${slug}`)
-        router.refresh()
+        window.location.href = `/${slug}`
       }
     } catch {
       setError('Erro ao conectar. Tente novamente.')
