@@ -204,22 +204,22 @@ export default function OrderStatusPage() {
               </div>
             </div>
 
-            <div className="bg-[var(--color-app-bg)] rounded-2xl p-5 border border-[var(--color-lime-primary)]/15">
+            <div className="bg-[var(--color-app-bg)] rounded-2xl p-5 border border-[var(--color-lime-primary)]/20">
               <h3 className="text-xs font-bold text-[var(--color-lime-primary)] uppercase tracking-wider mb-3">Itens do pedido</h3>
               <div className="space-y-2.5 mb-4">
                 {order.items.map((item: any, idx: number) => (
                   <div key={idx} className="flex items-start justify-between gap-2 text-sm">
                     <div className="flex gap-2 flex-1 min-w-0">
                       <span className="font-black text-[var(--color-lime-primary)] shrink-0">{item.quantity}×</span>
-                      <p className="font-semibold line-clamp-1">{item.product.name}</p>
+                      <p className="font-semibold text-gray-900 line-clamp-1">{item.product.name}</p>
                     </div>
-                    <span className="text-zinc-400 shrink-0 text-sm">{formatCurrency(item.price * item.quantity)}</span>
+                    <span className="text-gray-500 shrink-0 text-sm">{formatCurrency(item.price * item.quantity)}</span>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-white/10 pt-3 flex justify-between items-center">
-                <span className="text-sm text-zinc-400">Total</span>
-                <span className="font-black text-white text-lg">{formatCurrency(order.total)}</span>
+              <div className="border-t border-[var(--color-lime-primary)]/20 pt-3 flex justify-between items-center">
+                <span className="text-sm text-gray-500">Total</span>
+                <span className="font-black text-gray-900 text-lg">{formatCurrency(order.total)}</span>
               </div>
             </div>
 
