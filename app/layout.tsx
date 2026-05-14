@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import QueryProvider from '@/components/providers/QueryProvider'
+import AuthProvider from '@/components/providers/AuthProvider'
 import SocketProvider from '@/components/providers/SocketProvider'
 import { Toaster } from '@/components/ui/Toast'
 
@@ -26,12 +27,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${inter.variable} font-sans bg-gray-100 text-gray-900 antialiased`}
         suppressHydrationWarning
       >
-        <QueryProvider>
-          <SocketProvider>
-            {children}
-            <Toaster />
-          </SocketProvider>
-        </QueryProvider>
+        <AuthProvider>
+          <QueryProvider>
+            <SocketProvider>
+              {children}
+              <Toaster />
+            </SocketProvider>
+          </QueryProvider>
+        </AuthProvider>
       </body>
     </html>
   )
