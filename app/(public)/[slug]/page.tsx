@@ -12,7 +12,7 @@ export default async function RestaurantPage({
   const tenant = await getTenantBySlugDirect(slug);
   if (!tenant) notFound();
 
-  const menu = await getTenantMenuDirect(tenant.id);
+  const { categories } = await getTenantMenuDirect(tenant.id);
 
-  return <RestaurantShell tenant={tenant} menu={menu} slug={slug} />;
+  return <RestaurantShell tenant={tenant} menu={categories} slug={slug} />;
 }
