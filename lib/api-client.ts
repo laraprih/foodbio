@@ -19,7 +19,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T | 
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const url = path.startsWith('http') ? path : `${BASE_URL}${path}`;
+  // /bff/ paths go through Next.js rewrite → must use relative URL (same origin)
+  // Direct API paths use BASE_URL
+  const url = path.startsWith('http')
+    ? path
+    : path.startsWith('/bff/')
+      ? path
+      : `${BASE_URL}${path}`;
 
   try {
     const response = await fetch(url, { ...options, headers });
@@ -28,6 +34,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T | 
       signOut({ callbackUrl: '/login' });
       return { error: 'Sessão expirada', status: 401 };
     }
+
+    if (response.status === 204) return null as T;
 
     const data = await response.json();
 

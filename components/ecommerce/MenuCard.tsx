@@ -2,8 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { Plus, ShoppingCart } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import Spinner from '@/components/ui/Spinner';
 
@@ -22,60 +21,96 @@ interface MenuCardProps {
   onAdd: (productId: string) => void;
   loading?: boolean;
   restaurantSlug?: string;
+  layout?: 'grid' | 'list';
 }
 
-export default function MenuCard({ product, onAdd, loading, restaurantSlug }: MenuCardProps) {
-  return (
-    <div
-      className={cn(
-        'bg-white rounded-[28px] p-3 block border border-black/5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.03)] relative group hover:shadow-md transition-shadow',
-        !product.available && 'opacity-60'
-      )}
-    >
-      <Link href={`/${restaurantSlug}/details/${product.id}`} className="block">
-        <div className="mb-3 aspect-square rounded-[24px] overflow-hidden bg-[var(--color-app-bg)] relative">
-          {product.imageUrl && (
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              className="object-cover scale-[1.05]"
-              referrerPolicy="no-referrer"
-            />
+export default function MenuCard({
+  product,
+  onAdd,
+  loading,
+  restaurantSlug,
+  layout = 'grid',
+}: MenuCardProps) {
+  if (layout === 'list') {
+    return (
+      <div
+        className={cn(
+          'bg-white rounded-2xl flex items-center gap-4 p-3 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]',
+          !product.available && 'opacity-60'
+        )}
+        onClick={() => onAdd(product.id)}
+      >
+        <div className="w-24 h-24 rounded-xl overflow-hidden bg-gray-50 relative shrink-0">
+          {product.imageUrl ? (
+            <Image src={product.imageUrl} alt={product.name} fill className="object-cover" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <ShoppingCart className="w-8 h-8 text-gray-200" />
+            </div>
           )}
           {!product.available && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-              <span className="text-white font-bold text-xs bg-black/60 px-3 py-1 rounded-full uppercase tracking-wider">
-                Indisponível
-              </span>
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <span className="text-white text-[9px] font-bold bg-black/60 px-2 py-0.5 rounded-full uppercase">Indisponível</span>
             </div>
           )}
         </div>
-      </Link>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-gray-900 text-sm leading-tight line-clamp-1">{product.name}</h4>
+          {product.description && (
+            <p className="text-xs text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">{product.description}</p>
+          )}
+          <div className="flex items-center justify-between mt-2">
+            <span className="font-black text-gray-900 text-base">{formatCurrency(product.price)}</span>
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-lime-primary)] flex items-center justify-center shadow-sm pointer-events-none">
+              <Plus className="h-4 w-4 text-white stroke-[2.5]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-      <div className="space-y-1.5 px-2 pb-1">
-        <h4 className="font-bold text-zinc-900 text-[15px] line-clamp-1">{product.name}</h4>
-        <p className="text-[11px] text-zinc-400 font-medium line-clamp-1">
-          {product.description || 'Descrição não disponível'}
-        </p>
-        <div className="flex items-center justify-between pt-1">
-          <span className="font-extrabold text-zinc-900 text-[17px]">
-            {formatCurrency(product.price)}
-          </span>
-          <button
-            disabled={!product.available || loading}
-            onClick={(e) => {
-              e.preventDefault();
-              onAdd(product.id);
-            }}
-            className="bg-[var(--color-lime-primary)] w-8 h-8 rounded-[10px] shadow-sm flex items-center justify-center shrink-0 active:scale-95 transition-transform disabled:opacity-50"
-          >
-            {loading ? (
-              <Spinner size="sm" className="text-black" />
-            ) : (
-              <Plus className="h-4 w-4 text-black stroke-[3]" />
-            )}
-          </button>
+  return (
+    <div
+      className={cn(
+        'bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 group cursor-pointer active:scale-[0.99]',
+        !product.available && 'opacity-60'
+      )}
+      onClick={() => onAdd(product.id)}
+    >
+      <div className="relative aspect-square bg-gray-50">
+        {product.imageUrl ? (
+          <Image
+            src={product.imageUrl}
+            alt={product.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <ShoppingCart className="w-12 h-12 text-gray-200" />
+          </div>
+        )}
+        {!product.available && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <span className="text-white text-[10px] font-bold bg-black/60 px-3 py-1 rounded-full uppercase tracking-wider">
+              Indisponível
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="p-3">
+        <h4 className="font-bold text-gray-900 text-[14px] line-clamp-1 leading-snug">{product.name}</h4>
+        {product.description && (
+          <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">{product.description}</p>
+        )}
+        <div className="flex items-center justify-between mt-3">
+          <span className="font-black text-gray-900 text-[15px]">{formatCurrency(product.price)}</span>
+          <div className="w-8 h-8 rounded-xl bg-[var(--color-lime-primary)] flex items-center justify-center shadow-sm pointer-events-none">
+            <Plus className="h-4 w-4 text-white stroke-[2.5]" />
+          </div>
         </div>
       </div>
     </div>

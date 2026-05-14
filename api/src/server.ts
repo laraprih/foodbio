@@ -3,6 +3,7 @@ import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
+import multipart from '@fastify/multipart'
 import { redis } from './lib/redis'
 import prisma from './lib/prisma'
 import logger from './lib/logger'
@@ -19,6 +20,7 @@ const fastify = Fastify({ logger: false }) // Pino gerenciado por logger.ts
 
 async function bootstrap() {
   await fastify.register(helmet, { contentSecurityPolicy: false })
+  await fastify.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } }) // 5MB
 
   await fastify.register(cors, {
     origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
@@ -45,6 +47,73 @@ async function bootstrap() {
   fastify.post('/api/auth/login', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
     const { login } = await import('./controllers/auth.controller')
     return login(req as Parameters<typeof login>[0], reply)
+  })
+
+  // Social login — verifica token com Facebook Graph API e cria/vincula usuário
+  fastify.post('/api/auth/social', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (req: any, reply) => {
+    const { provider, accessToken } = req.body as { provider: string; accessToken: string }
+
+    if (provider !== 'facebook') {
+      return reply.status(400).send({ error: 'Provider não suportado' })
+    }
+
+    // Verifica token diretamente com o Facebook
+    const fbRes = await fetch(
+      `https://graph.facebook.com/me?fields=id,name,email,picture.type(large)&access_token=${encodeURIComponent(accessToken)}`
+    )
+
+    const profile = await fbRes.json() as {
+      id?: string; name?: string; email?: string
+      picture?: { data: { url: string } }; error?: { message: string }
+    }
+
+    if (!fbRes.ok || profile.error || !profile.id) {
+      return reply.status(401).send({ error: 'Token inválido' })
+    }
+
+    let user = await prisma.user.findFirst({ where: { facebookId: profile.id } })
+
+    if (!user && profile.email) {
+      user = await prisma.user.findUnique({ where: { email: profile.email } })
+      if (user) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            facebookId: profile.id,
+            avatarUrl: user.avatarUrl ?? profile.picture?.data?.url,
+          },
+        })
+      }
+    }
+
+    if (!user) {
+      const email = profile.email ?? `fb_${profile.id}@foodin.social`
+      user = await prisma.user.create({
+        data: {
+          name: profile.name ?? 'Usuário',
+          email,
+          role: 'customer',
+          facebookId: profile.id,
+          avatarUrl: profile.picture?.data?.url,
+        },
+      })
+      // Garante registro de Customer vinculado
+      await prisma.customer.upsert({
+        where: { userId: user.id },
+        create: { userId: user.id },
+        update: {},
+      })
+    }
+
+    const token = await reply.jwtSign(
+      { id: user.id, email: user.email, role: user.role, tenantId: user.tenantId ?? null },
+      { expiresIn: '30d' }
+    )
+
+    return {
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId },
+    }
   })
 
   // Rotas de negócio

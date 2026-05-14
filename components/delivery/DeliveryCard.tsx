@@ -99,7 +99,7 @@ export default function DeliveryCard({ delivery, onPickUp, onDeliver }: Delivery
           </div>
           <a
             href={`tel:${order.customer.phone}`}
-            className="w-9 h-9 bg-zinc-900 rounded-xl flex items-center justify-center text-[var(--color-lime-primary)] hover:opacity-80 transition-opacity"
+            className="w-9 h-9 bg-[var(--color-lime-primary)] rounded-xl flex items-center justify-center text-white hover:brightness-90 transition-all"
           >
             <Phone className="w-4 h-4" />
           </a>
@@ -118,7 +118,7 @@ export default function DeliveryCard({ delivery, onPickUp, onDeliver }: Delivery
           {status === DeliveryStatus.ASSIGNED && onPickUp && (
             <button
               onClick={() => onPickUp(delivery.id)}
-              className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-zinc-900 text-[var(--color-lime-primary)] font-bold text-sm hover:opacity-90 active:scale-95 transition-all"
+              className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-[var(--color-lime-primary)] text-white font-bold text-sm hover:brightness-90 active:scale-95 transition-all"
             >
               <Package className="w-4 h-4" />
               Confirmar Coleta
@@ -127,7 +127,7 @@ export default function DeliveryCard({ delivery, onPickUp, onDeliver }: Delivery
           {(status === DeliveryStatus.PICKED_UP || status === DeliveryStatus.ON_THE_WAY) && onDeliver && (
             <button
               onClick={() => onDeliver(delivery.id)}
-              className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-[var(--color-lime-primary)] text-black font-bold text-sm hover:opacity-90 active:scale-95 transition-all"
+              className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-[var(--color-lime-primary)] text-white font-bold text-sm hover:brightness-90 active:scale-95 transition-all"
             >
               <CheckCircle className="w-4 h-4" />
               Confirmar Entrega

@@ -81,7 +81,7 @@ export async function createOrder(
       subtotal,
       deliveryFee,
       total,
-      deliveryAddress,
+      deliveryAddress: deliveryAddress as any,
       customerName,
       customerPhone,
       notes,
@@ -123,7 +123,7 @@ export async function getOrder(
   const order = await prisma.order.findUnique({
     where: { id: request.params.id },
     include: {
-      items: { include: { options: true } },
+      items: { include: { options: true, product: { select: { name: true } } } },
       delivery: true,
     },
   })

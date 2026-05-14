@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma'
-import { getTenant, invalidateTenant } from './cache.service'
+import { getTenant, invalidateTenant, getMenu } from './cache.service'
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
 
 const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY ?? '0'.repeat(64), 'hex')
@@ -21,6 +21,14 @@ export function decryptToken(encrypted: string): string {
   const decipher = createDecipheriv(ALGORITHM, ENCRYPTION_KEY, iv)
   decipher.setAuthTag(tag)
   return decipher.update(data) + decipher.final('utf8')
+}
+
+export async function getTenantBySlug(slug: string) {
+  return getTenant(slug)
+}
+
+export async function getTenantMenu(tenantId: string) {
+  return getMenu(tenantId)
 }
 
 export async function resolveTenant(slugOrId: string) {

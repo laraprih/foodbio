@@ -7,13 +7,16 @@ export const loginSchema = z.object({
 
 export const checkoutSchema = z.object({
   name: z.string().min(2, 'Nome obrigatório'),
-  phone: z.string().regex(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, 'Telefone inválido'),
+  phone: z.string().refine(v => v.replace(/\D/g, '').length >= 10, 'Telefone inválido'),
   deliveryType: z.enum(['delivery', 'pickup']),
   address: z.object({
+    cep: z.string().refine(v => v.replace(/\D/g, '').length === 8, 'CEP inválido'),
     street: z.string().min(1, 'Rua obrigatória'),
     number: z.string().min(1, 'Número obrigatório'),
+    complement: z.string().optional(),
     neighborhood: z.string().min(1, 'Bairro obrigatório'),
     city: z.string().min(1, 'Cidade obrigatória'),
+    state: z.string().min(2, 'Estado obrigatório'),
   }).optional(),
   paymentMethod: z.enum(['pix', 'credit_card']),
 }).refine((data) => {
@@ -35,5 +38,5 @@ export const productSchema = z.object({
   description: z.string().max(300, 'Descrição muito longa').optional(),
   price: z.number().positive('Preço deve ser positivo'),
   categoryId: z.string().min(1, 'Selecione uma categoria'),
-  available: z.boolean().default(true),
+  available: z.boolean(),
 });

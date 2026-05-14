@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronLeft, Heart, Clock, Star, ShieldCheck, Plus, Minus } from 'lucide-react';
+import { ArrowLeft, Heart, Star, Clock, Minus, Plus, ShieldCheck, ChefHat } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 interface Option {
   id: string;
@@ -26,9 +26,10 @@ interface ProductDetailProps {
   product: Product;
   onAdd: (product: any, options: any[]) => void;
   loading?: boolean;
+  slug?: string;
 }
 
-export default function ProductDetail({ product, onAdd, loading }: ProductDetailProps) {
+export default function ProductDetail({ product, onAdd, loading, slug }: ProductDetailProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
 
@@ -45,132 +46,171 @@ export default function ProductDetail({ product, onAdd, loading }: ProductDetail
   const totalPrice = unitPrice * quantity;
 
   return (
-    <main className="flex-1 flex flex-col overflow-y-auto no-scrollbar relative bg-[#f5faed]">
-      {/* Header */}
-      <header className="px-6 pt-12 pb-4 flex items-center justify-between z-10 relative">
-        <Link
-          href="/"
-          className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] active:scale-95 transition-transform"
-        >
-          <ChevronLeft className="w-5 h-5 text-gray-800" strokeWidth={2.5} />
-        </Link>
-        <h1 className="text-lg font-bold text-gray-800">Detalhes</h1>
-        <button className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center shadow-[0_2px_10px_-4px_rgba(239,68,68,0.4)] active:scale-95 transition-transform">
-          <Heart className="w-5 h-5 fill-white text-white" />
-        </button>
-      </header>
+    <div className="min-h-screen bg-white lg:bg-gray-50">
+      {/* Mobile/Tablet: stacked. Desktop: 2-col */}
+      <div className="max-w-5xl mx-auto lg:pt-8 lg:pb-12 lg:px-8">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-10 lg:bg-white lg:rounded-2xl lg:shadow-sm lg:border lg:border-gray-100 lg:overflow-hidden">
 
-      {/* Product Image Area */}
-      <div className="flex flex-col items-center pt-2 pb-6 relative z-0">
-        <div className="absolute top-0 right-0 left-0 h-[200px] bg-gradient-to-b from-[#e6f7cf] to-transparent opacity-60 z-[-1]" />
-        <div className="w-[280px] h-[280px] relative drop-shadow-[0_25px_35px_rgba(0,0,0,0.15)] mb-8">
-          {product.imageUrl && (
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              className="object-contain rounded-full"
-              referrerPolicy="no-referrer"
-            />
-          )}
-        </div>
-      </div>
+          {/* Image column */}
+          <div className="relative">
+            {/* Back button (mobile) */}
+            <div className="absolute top-4 left-4 z-10 lg:hidden">
+              <Link
+                href={slug ? `/${slug}` : '/'}
+                className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-800" strokeWidth={2.5} />
+              </Link>
+            </div>
+            <div className="absolute top-4 right-4 z-10 lg:hidden">
+              <button className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md">
+                <Heart className="w-5 h-5 text-gray-700" />
+              </button>
+            </div>
 
-      {/* Product Info Content */}
-      <section className="px-6 pb-[120px] bg-gray-50 flex-1 rounded-t-[40px] pt-8 -mt-6 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
-        <div className="mb-5">
-          <h2 className="text-[26px] leading-tight font-extrabold text-gray-900">
-            {product.name}
-          </h2>
-        </div>
-
-        <div className="flex flex-wrap gap-3 mb-6">
-          <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-50/80 border border-green-100 rounded-[14px]">
-            <ShieldCheck className="w-4 h-4 text-green-600" />
-            <span className="text-xs font-bold text-green-700">Verificado</span>
-          </div>
-          <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50/80 border border-blue-100 rounded-[14px]">
-            <Clock className="w-4 h-4 text-blue-600" />
-            <span className="text-xs font-bold text-blue-700">10-20 min</span>
-          </div>
-          <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50/80 border border-yellow-100 rounded-[14px]">
-            <Star className="w-4 h-4 text-yellow-600 fill-yellow-500" />
-            <span className="text-xs font-bold text-yellow-700">4.5</span>
-          </div>
-        </div>
-
-        <div className="mb-6 text-gray-500 text-[13px] leading-relaxed font-medium">
-          {product.description || 'Nenhuma descrição disponível para este produto.'}
-        </div>
-
-        {/* Options Selection */}
-        {product.options && product.options.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-gray-900 font-bold text-sm mb-4">Personalize</h3>
-            <div className="space-y-3">
-              {product.options.map((option) => (
-                <div
-                  key={option.id}
-                  onClick={() => toggleOption(option)}
-                  className={cn(
-                    'flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer',
-                    selectedOptions.find((o) => o.id === option.id)
-                      ? 'border-[var(--color-lime-primary)] bg-[var(--color-lime-primary)]/5'
-                      : 'border-gray-100 bg-white'
-                  )}
-                >
-                  <span className="text-sm font-semibold text-gray-700">
-                    {option.name}
-                  </span>
-                  <span className="text-sm font-bold text-gray-900">
-                    +R$ {option.price.toFixed(2)}
-                  </span>
+            {/* Product image */}
+            <div className="aspect-square lg:aspect-auto lg:h-full relative bg-gray-50 lg:min-h-[480px]">
+              {product.imageUrl ? (
+                <Image
+                  src={product.imageUrl}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  referrerPolicy="no-referrer"
+                  priority
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-3 min-h-[300px]">
+                  <ChefHat className="w-16 h-16 text-gray-200" />
+                  <span className="text-sm text-gray-300">Sem imagem</span>
                 </div>
-              ))}
+              )}
             </div>
           </div>
-        )}
-      </section>
 
-      {/* Sticky Bottom Footer */}
-      <footer className="absolute bottom-0 left-0 w-full bg-white p-6 pb-8 border-t border-gray-100 flex items-center justify-between z-50 rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-        <div className="flex flex-col">
-          <span className="text-gray-400 text-[11px] font-semibold mb-0.5">
-            Valor Total
-          </span>
-          <span className="text-[26px] font-extrabold text-gray-900 leading-none">
-            R$ {totalPrice.toFixed(2)}
-          </span>
-        </div>
+          {/* Info column */}
+          <div className="px-5 py-6 lg:px-8 lg:py-8 flex flex-col">
+            {/* Desktop back button */}
+            <div className="hidden lg:flex items-center justify-between mb-6">
+              <Link
+                href={slug ? `/${slug}` : '/'}
+                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Voltar ao cardápio
+              </Link>
+              <button className="w-9 h-9 rounded-xl border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                <Heart className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
 
-        <div className="flex items-center">
-          <div className="flex items-center space-x-4 mr-5 bg-gray-50 rounded-full px-3 py-1.5 border border-gray-100">
-            <button
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              className="text-gray-400 font-bold text-xl active:scale-95 transition-transform"
-            >
-              <Minus className="w-4 h-4" strokeWidth={3} />
-            </button>
-            <span className="text-gray-900 font-bold text-lg w-4 text-center">
-              {quantity}
-            </span>
-            <button
-              onClick={() => setQuantity(quantity + 1)}
-              className="w-[28px] h-[28px] bg-[#84cc16] rounded-full text-white flex items-center justify-center shadow-sm active:scale-95 transition-transform"
-            >
-              <Plus className="w-4 h-4 text-white" strokeWidth={3} />
-            </button>
+            {/* Product name */}
+            <h1 className="text-2xl lg:text-3xl font-black text-gray-900 leading-tight mb-2">
+              {product.name}
+            </h1>
+
+            {/* Meta pills */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100 px-2.5 py-1 rounded-full">
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                4.8
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full">
+                <Clock className="w-3.5 h-3.5" />
+                10-20 min
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-1 rounded-full">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Verificado
+              </span>
+            </div>
+
+            {/* Description */}
+            {product.description && (
+              <p className="text-sm text-gray-500 leading-relaxed mb-6">{product.description}</p>
+            )}
+
+            {/* Options */}
+            {product.options && product.options.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-bold text-gray-900 mb-3">
+                  Personalize seu pedido
+                </h3>
+                <div className="space-y-2">
+                  {product.options.map((option) => {
+                    const isSelected = !!selectedOptions.find((o) => o.id === option.id);
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => toggleOption(option)}
+                        className={cn(
+                          'w-full flex items-center justify-between p-3.5 rounded-xl border text-left transition-all text-sm',
+                          isSelected
+                            ? 'border-zinc-900 bg-zinc-50'
+                            : 'border-gray-100 bg-white hover:border-gray-200'
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              'w-4.5 h-4.5 rounded border-2 flex items-center justify-center transition-colors shrink-0',
+                              isSelected ? 'border-[var(--color-lime-primary)] bg-[var(--color-lime-primary)]' : 'border-gray-300'
+                            )}
+                          >
+                            {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
+                          </div>
+                          <span className="font-semibold text-gray-800">{option.name}</span>
+                        </div>
+                        <span className="font-bold text-gray-900 shrink-0">+{formatCurrency(option.price)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Price + Add to cart */}
+            <div className="bg-gray-50 rounded-2xl p-4 mt-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs text-gray-400 font-medium mb-0.5">Total</p>
+                  <p className="text-2xl font-black text-gray-900">{formatCurrency(totalPrice)}</p>
+                </div>
+
+                {/* Quantity selector */}
+                <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl px-3 py-2">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  >
+                    <Minus className="w-3.5 h-3.5 text-gray-600" strokeWidth={2.5} />
+                  </button>
+                  <span className="font-black text-gray-900 text-base w-5 text-center">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="w-7 h-7 rounded-lg bg-[var(--color-lime-primary)] flex items-center justify-center hover:brightness-95 transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                variant="dark"
+                size="xl"
+                className="w-full"
+                onClick={() => onAdd(product, selectedOptions)}
+                loading={loading}
+              >
+                Adicionar ao Carrinho
+              </Button>
+            </div>
           </div>
-          <Button
-            variant="dark"
-            className="px-7 h-14"
-            onClick={() => onAdd(product, selectedOptions)}
-            loading={loading}
-          >
-            Adicionar
-          </Button>
         </div>
-      </footer>
-    </main>
+      </div>
+    </div>
   );
 }

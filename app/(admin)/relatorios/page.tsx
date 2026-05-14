@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { get, isApiError } from '@/lib/api-client'
 import { TrendingUp, DollarSign, ShoppingBag, BarChart3, Download } from 'lucide-react'
-import Spinner from '@/components/ui/Spinner'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { cn } from '@/lib/utils'
 
 type Period = '7d' | '30d' | '90d'
@@ -55,7 +55,7 @@ export default function RelatoriosPage() {
             className={cn(
               'px-5 py-2.5 rounded-2xl text-sm font-bold transition-colors',
               period === p
-                ? 'bg-zinc-900 text-[var(--color-lime-primary)]'
+                ? 'bg-[var(--color-lime-primary)] text-white'
                 : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400'
             )}
           >
@@ -65,9 +65,36 @@ export default function RelatoriosPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <Spinner size="lg" />
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-[28px] border border-black/5 p-6 space-y-4">
+                <Skeleton className="w-12 h-12 rounded-2xl" />
+                <Skeleton className="h-3.5 w-24" />
+                <Skeleton className="h-7 w-28" />
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-[28px] border border-black/5 p-6 mb-8">
+            <Skeleton className="h-5 w-40 mb-6" />
+            <div className="flex items-end gap-1.5 h-32">
+              {Array.from({ length: 18 }).map((_, i) => (
+                <Skeleton key={i} className="flex-1 rounded-t-lg" style={{ height: `${25 + Math.random() * 75}%` }} />
+              ))}
+            </div>
+          </div>
+          <div className="bg-white rounded-[28px] border border-black/5 overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100"><Skeleton className="h-5 w-40" /></div>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="px-6 py-4 flex items-center gap-4 border-t border-gray-50 first:border-0">
+                <Skeleton className="w-7 h-7 rounded-xl shrink-0" />
+                <Skeleton className="flex-1 h-4" />
+                <Skeleton className="h-4 w-8" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <>
           {/* KPI cards */}
@@ -127,7 +154,7 @@ export default function RelatoriosPage() {
               <div className="divide-y divide-gray-50">
                 {r.topProducts.map((product, idx) => (
                   <div key={product.name} className="px-6 py-4 flex items-center gap-4">
-                    <span className="w-7 h-7 rounded-xl bg-zinc-900 text-[var(--color-lime-primary)] font-black text-xs flex items-center justify-center shrink-0">
+                    <span className="w-7 h-7 rounded-xl bg-[var(--color-lime-primary)] text-white font-black text-xs flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
                     <span className="flex-1 font-bold text-gray-900 text-sm">{product.name}</span>

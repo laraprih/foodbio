@@ -1,30 +1,26 @@
 import { FastifyInstance } from 'fastify';
-import { createOrder, getOrderById } from '@/services/order.service';
+import { createOrder, payOrder, getOrder } from '@/controllers/order.controller';
 
 export async function clientRoutes(fastify: FastifyInstance) {
-  // Create Order
+  // Create Order — mapeia campos do frontend para o controller
   fastify.post('/orders', async (request: any, reply) => {
-    try {
-      const order = await createOrder(request.body);
-      return { orderId: order.id };
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
-    }
+    // Frontend envia deliveryType/address; controller espera type/deliveryAddress
+    const body = request.body ?? {};
+    request.body = {
+      ...body,
+      type: body.deliveryType ?? body.type ?? 'delivery',
+      deliveryAddress: body.address ?? body.deliveryAddress,
+    };
+    return createOrder(request, reply);
   });
 
-  // Get Order Status
+  // Get Order
   fastify.get('/orders/:id', async (request: any, reply) => {
-    const { id } = request.params;
-    const order = await getOrderById(id);
-    if (!order) return reply.status(404).send({ error: 'Pedido não encontrado' });
-    return order;
+    return getOrder(request, reply);
   });
 
   // Pay Order
   fastify.post('/orders/:id/pay', async (request: any, reply) => {
-    const { id } = request.params;
-    // For now, just mark as confirmed for testing
-    // In real implementation, this triggers payment service
-    return { success: true };
+    return payOrder(request, reply);
   });
 }

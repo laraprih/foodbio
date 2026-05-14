@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { get, patch, isApiError } from '@/lib/api-client'
 import { toast } from 'react-hot-toast'
-import Spinner from '@/components/ui/Spinner'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { cn } from '@/lib/utils'
 import { useSocket } from '@/hooks/use-socket'
 import { Clock, CheckCircle, XCircle, Package, ChevronRight } from 'lucide-react'
@@ -61,7 +61,7 @@ export default function PedidosPage() {
   })
 
   const cancelOrder = useMutation({
-    mutationFn: (id: string) => patch(`/bff/api/admin/orders/${id}/cancel`),
+    mutationFn: (id: string) => patch(`/bff/api/admin/orders/${id}/cancel`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders-full'] })
       toast.success('Pedido cancelado')
@@ -94,7 +94,7 @@ export default function PedidosPage() {
             className={cn(
               'px-4 py-2 rounded-2xl text-sm font-bold whitespace-nowrap transition-colors',
               activeTab === tab.id
-                ? 'bg-zinc-900 text-[var(--color-lime-primary)]'
+                ? 'bg-[var(--color-lime-primary)] text-white'
                 : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400'
             )}
           >
@@ -109,8 +109,26 @@ export default function PedidosPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <Spinner size="lg" />
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-[28px] border border-black/5 p-6 flex items-start gap-4">
+              <div className="flex-1 space-y-2.5">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+                <div className="flex gap-4">
+                  <Skeleton className="h-3.5 w-16" />
+                  <Skeleton className="h-3.5 w-12" />
+                  <Skeleton className="h-3.5 w-10" />
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Skeleton className="h-9 w-24 rounded-2xl" />
+                <Skeleton className="h-9 w-9 rounded-xl" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-gray-400 font-medium">
@@ -148,7 +166,7 @@ export default function PedidosPage() {
                 {order.status !== 'delivered' && order.status !== 'cancelled' && NEXT_STATUS[order.status] && (
                   <button
                     onClick={() => updateStatus.mutate({ id: order.id, status: NEXT_STATUS[order.status] })}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-zinc-900 text-[var(--color-lime-primary)] font-bold text-xs hover:opacity-90 transition-opacity"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[var(--color-lime-primary)] text-white font-bold text-xs hover:brightness-90 transition-all"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
                     Avançar

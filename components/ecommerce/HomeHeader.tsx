@@ -2,104 +2,161 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Search, SlidersHorizontal, MapPin, Bell } from 'lucide-react';
-import { images } from '@/lib/data';
+import Link from 'next/link';
+import { Search, MapPin, ShoppingBag, Clock, Star, Bike } from 'lucide-react';
 
 interface HomeHeaderProps {
   restaurantName: string;
   restaurantLogo?: string;
+  logoFormat?: string;
   location?: string;
   onSearch?: (query: string) => void;
   searchValue?: string;
+  cartCount?: number;
+  slug?: string;
+  minOrder?: number;
+  deliveryTime?: string;
+  rating?: number;
 }
 
 export default function HomeHeader({
   restaurantName,
   restaurantLogo,
+  logoFormat = 'square',
   location,
   onSearch,
   searchValue,
+  cartCount = 0,
+  slug,
+  deliveryTime = '30-50',
+  rating = 4.8,
 }: HomeHeaderProps) {
   return (
-    <header className="bg-zinc-900 pt-12 pb-8 px-6 rounded-b-[40px]">
-      <div className="flex items-center justify-between mb-8">
-        {/* User Profile / Logo */}
-        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 shrink-0">
-          <Image
-            src={restaurantLogo || images.profile}
-            alt={restaurantName}
-            width={40}
-            height={40}
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-        </div>
+    <div>
+      {/* Top sticky navbar */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 h-16">
+            {/* Restaurant logo + name */}
+            <Link href={slug ? `/${slug}` : '/'} className="flex items-center gap-2.5 shrink-0">
+              {restaurantLogo ? (
+                logoFormat === 'wide' ? (
+                  // Horizontal rectangle logo
+                  <div className="h-10 w-32 sm:h-11 sm:w-36 rounded-xl overflow-hidden shrink-0 relative">
+                    <Image
+                      src={restaurantLogo}
+                      alt={restaurantName}
+                      fill
+                      className="object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                ) : (
+                  // Square logo
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden shrink-0 relative">
+                    <Image
+                      src={restaurantLogo}
+                      alt={restaurantName}
+                      fill
+                      className="object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                )
+              ) : (
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[var(--color-lime-primary)] flex items-center justify-center shrink-0">
+                  <span className="text-white font-black text-base">F</span>
+                </div>
+              )}
+              {logoFormat !== 'wide' && (
+                <span className="font-black text-gray-900 text-base hidden sm:block line-clamp-1 max-w-[140px]">
+                  {restaurantName}
+                </span>
+              )}
+            </Link>
 
-        {/* Restaurant Name / Location */}
-        <div className="text-center flex-1 px-2">
-          <p className="text-[11px] text-zinc-400 font-medium mb-0.5">
-            {restaurantName}
-          </p>
-          <div className="flex items-center justify-center gap-1">
-            <MapPin className="h-3.5 w-3.5 text-[var(--color-lime-primary)]" />
-            <span className="text-sm text-white font-semibold line-clamp-1">
-              {location || 'Kaligonj, Satkhira, Bangladesh'}
-            </span>
+            {/* Search bar — desktop */}
+            <div className="hidden md:flex flex-1 max-w-lg mx-auto relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar no cardápio..."
+                value={searchValue}
+                onChange={(e) => onSearch?.(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]/50 focus:border-transparent"
+              />
+            </div>
+
+            {/* Location */}
+            {location && (
+              <div className="hidden lg:flex items-center gap-1.5 text-sm text-gray-500 shrink-0 ml-auto mr-4">
+                <MapPin className="h-4 w-4 text-[var(--color-lime-primary)] shrink-0" />
+                <span className="line-clamp-1 max-w-[180px]">{location}</span>
+              </div>
+            )}
+
+            {/* Cart */}
+            {slug && (
+              <Link
+                href={`/${slug}/cart`}
+                className="relative ml-auto md:ml-0 flex items-center justify-center bg-[var(--color-lime-primary)] text-white w-11 h-11 rounded-xl hover:brightness-90 transition-all shrink-0"
+              >
+                <ShoppingBag className="h-5 w-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-white text-[var(--color-lime-primary)] text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+            )}
           </div>
         </div>
+      </header>
 
-        {/* Notification Bell */}
-        <button className="relative w-10 h-10 shrink-0 flex items-center justify-center bg-zinc-800 rounded-full">
-          <Bell className="h-5 w-5 text-white" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 border-2 border-zinc-900 rounded-full"></span>
-        </button>
+      {/* Restaurant hero info strip */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          {/* Mobile search */}
+          <div className="md:hidden mb-4 relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar no cardápio..."
+              value={searchValue}
+              onChange={(e) => onSearch?.(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]/50 focus:border-transparent"
+            />
+          </div>
+
+          {/* Info pills */}
+          <div className="flex items-center gap-4 text-sm overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+              <span className="font-bold text-gray-900">{rating}</span>
+              <span className="text-gray-400">(500+)</span>
+            </div>
+            <div className="w-px h-4 bg-gray-200 shrink-0" />
+            <div className="flex items-center gap-1.5 text-gray-600 shrink-0">
+              <Clock className="h-4 w-4" />
+              <span>{deliveryTime} min</span>
+            </div>
+            <div className="w-px h-4 bg-gray-200 shrink-0" />
+            <div className="flex items-center gap-1.5 text-gray-600 shrink-0">
+              <Bike className="h-4 w-4" />
+              <span>Entrega disponível</span>
+            </div>
+            {location && (
+              <>
+                <div className="w-px h-4 bg-gray-200 shrink-0" />
+                <div className="flex items-center gap-1.5 text-gray-500 shrink-0 md:hidden">
+                  <MapPin className="h-4 w-4 text-[var(--color-lime-primary)]" />
+                  <span className="line-clamp-1 max-w-[160px]">{location}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
-
-      {/* Hero Card */}
-      <section className="relative bg-zinc-800/60 rounded-3xl p-6 overflow-hidden border border-white/5 h-[160px] flex items-center">
-        <div className="relative z-10 w-2/3">
-          <h2 className="text-2xl font-bold text-white leading-tight">
-            <span className="text-[var(--color-lime-primary)]">30%</span> EXTRA
-            <br />
-            DISCOUNT
-          </h2>
-          <p className="text-[11px] text-zinc-300 mt-2 leading-relaxed opacity-80">
-            Enjoy your first ride with an
-            <br />
-            exclusive offer!
-          </p>
-        </div>
-        {/* Hero Image */}
-        <div className="absolute top-0 right-[-10%] h-full w-[60%] pointer-events-none">
-          <Image
-            src={images.heroBurger}
-            alt="Special Offer"
-            width={200}
-            height={200}
-            className="object-contain h-full w-full opacity-90 scale-[1.3] translate-y-3"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-      </section>
-
-      {/* Search Bar */}
-      <div className="mt-8 flex gap-3">
-        <div className="relative flex-1">
-          <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-zinc-400" />
-          </span>
-          <input
-            type="text"
-            placeholder="Search"
-            value={searchValue}
-            onChange={(e) => onSearch?.(e.target.value)}
-            className="w-full bg-white rounded-[20px] py-4 pl-12 pr-4 text-sm border-none focus:ring-2 focus:ring-[var(--color-lime-primary)]/50 text-zinc-800 shadow-sm outline-none"
-          />
-        </div>
-        <button className="bg-white p-4 rounded-[20px] shadow-sm flex items-center justify-center shrink-0">
-          <SlidersHorizontal className="h-5 w-5 text-zinc-800" />
-        </button>
-      </div>
-    </header>
+    </div>
   );
 }

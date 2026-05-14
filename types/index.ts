@@ -4,10 +4,13 @@ import type { OrderStatus, DeliveryStatus } from '@/lib/constants'
 
 // ── Shared address ────────────────────────────────────────────────────────────
 export interface Address {
+  cep: string
   street: string
   number: string
+  complement?: string
   neighborhood: string
   city: string
+  state: string
 }
 
 // ── Order domain ──────────────────────────────────────────────────────────────

@@ -2,9 +2,9 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Minus, Plus, Trash2, Check } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { CartItem as CartItemType } from '@/store/cart-store';
-import { cn, formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 
 interface CartItemProps {
   item: CartItemType;
@@ -13,87 +13,55 @@ interface CartItemProps {
   onDecrement: () => void;
 }
 
-export default function CartItem({
-  item,
-  onRemove,
-  onIncrement,
-  onDecrement,
-}: CartItemProps) {
+export default function CartItem({ item, onRemove, onIncrement, onDecrement }: CartItemProps) {
   return (
-    <div className="bg-white rounded-[28px] p-3.5 flex items-center gap-3.5 relative shadow-[0_4px_20px_-10px_rgba(0,0,0,0.03)] border border-black/5">
-      {/* Checkbox */}
-      <div className="relative flex items-center justify-center shrink-0">
-        <div className="w-[20px] h-[20px] bg-black rounded-[6px] flex items-center justify-center">
-          <Check className="w-3 h-3 text-white" strokeWidth={4} />
-        </div>
-      </div>
-
-      {/* Product Image */}
-      <div className="w-[84px] h-[84px] bg-gray-50 rounded-[22px] overflow-hidden shrink-0 relative border border-black/[0.02]">
-        {item.imageUrl && (
-          <Image
-            src={item.imageUrl}
-            alt={item.name}
-            fill
-            className="object-cover scale-[1.05]"
-            referrerPolicy="no-referrer"
-          />
+    <div className="bg-white rounded-2xl border border-gray-100 p-4 flex gap-4 shadow-sm">
+      {/* Image */}
+      <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0 relative border border-gray-50">
+        {item.imageUrl ? (
+          <Image src={item.imageUrl} alt={item.name} fill className="object-cover" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <ShoppingCart className="w-8 h-8 text-gray-200" />
+          </div>
         )}
       </div>
 
-      {/* Product Info */}
-      <div className="flex-1 py-1 pr-2">
-        <h3 className="text-[15px] font-bold text-gray-900 leading-tight line-clamp-1">
-          {item.name}
-        </h3>
-        
-        {/* Selected Options Pills */}
-        <div className="flex flex-wrap gap-1 mt-1 mb-2.5">
-          {item.selectedOptions.map((opt) => (
-            <span
-              key={opt.optionId}
-              className="text-[9px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full font-medium"
-            >
-              {opt.name} (+{formatCurrency(opt.price)})
-            </span>
-          ))}
-          {item.selectedOptions.length === 0 && (
-            <span className="text-[11px] text-gray-400 font-medium">Preço base</span>
-          )}
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-1 flex-1">{item.name}</h3>
+          <button
+            onClick={onRemove}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        <div className="flex justify-between items-center">
-          <span className="text-[15px] font-extrabold text-gray-900">
-            {formatCurrency(item.itemTotal)}
-          </span>
-          
-          <div className="flex items-center gap-3.5 bg-gray-50/80 border border-gray-100 rounded-full px-2.5 py-1.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
-            <button
-              onClick={onDecrement}
-              className="text-gray-400 hover:text-gray-600 active:scale-95 transition-all"
-            >
-              <Minus className="w-3.5 h-3.5" strokeWidth={3} />
+        {item.selectedOptions.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {item.selectedOptions.map((opt) => (
+              <span key={opt.optionId} className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full font-medium">
+                {opt.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mt-2.5">
+          <span className="font-black text-gray-900 text-base">{formatCurrency(item.itemTotal)}</span>
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-2.5 py-1.5">
+            <button onClick={onDecrement} className="w-6 h-6 rounded-lg border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50 transition-colors">
+              <Minus className="w-3 h-3 text-gray-600" strokeWidth={2.5} />
             </button>
-            <span className="text-[13px] font-extrabold text-gray-900 w-3 text-center">
-              {item.quantity}
-            </span>
-            <button
-              onClick={onIncrement}
-              className="w-[22px] h-[22px] bg-[#bef264] rounded-full flex items-center justify-center text-zinc-800 shadow-sm active:scale-95 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" strokeWidth={3} />
+            <span className="font-black text-gray-900 text-sm w-4 text-center">{item.quantity}</span>
+            <button onClick={onIncrement} className="w-6 h-6 rounded-lg bg-[var(--color-lime-primary)] flex items-center justify-center hover:brightness-95 transition-all">
+              <Plus className="w-3 h-3 text-white" strokeWidth={2.5} />
             </button>
           </div>
         </div>
       </div>
-
-      {/* Remove Button */}
-      <button
-        onClick={onRemove}
-        className="absolute top-[18px] right-[18px] text-gray-300 hover:text-red-500 transition-colors"
-      >
-        <Trash2 className="w-[15px] h-[15px]" strokeWidth={2.5} />
-      </button>
     </div>
   );
 }

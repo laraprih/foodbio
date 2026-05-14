@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, use } from 'react';
+export const dynamic = 'force-dynamic';
+
+import React, { useState, use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CreditCard, Landmark, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { useCreateOrder, usePayOrder } from '@/hooks/use-orders';
 import CheckoutForm from '@/components/ecommerce/CheckoutForm';
@@ -20,7 +22,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
   const router = useRouter();
   const { tenant } = useSessionStore();
   const { items, total, cartSubtotal, deliveryFee, isEmpty, clearCart } = useCart();
-  
+
   const [orderId, setOrderId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
@@ -31,137 +33,134 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
   const handleCheckoutSubmit = (data: CheckoutData) => {
     if (!tenant) return;
     setCheckoutData(data);
-
-    const payload = {
-      restaurantId: tenant.id,
-      items: items.map((i) => ({
-        productId: i.productId,
-        quantity: i.quantity,
-        options: i.selectedOptions.map((o) => o.optionId),
-      })),
-      deliveryType: data.deliveryType,
-      address: data.deliveryType === 'delivery' ? data.address : null,
-      customerName: data.name,
-      customerPhone: data.phone,
-      paymentMethod: data.paymentMethod,
-    };
-
-    createOrder(payload, {
-      onSuccess: (response) => {
-        if (!response || 'error' in response) {
-          toast.error('error' in response ? response.error : 'Erro ao criar pedido')
-          return
-        }
-        setOrderId(response.orderId);
-        if (data.paymentMethod === 'pix') {
-          router.push(`/${slug}/pedido/${response.orderId}`);
-          clearCart();
-        } else {
-          setShowPaymentModal(true);
-        }
+    createOrder(
+      {
+        restaurantId: tenant.id,
+        items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, options: i.selectedOptions.map((o) => o.optionId) })),
+        deliveryType: data.deliveryType,
+        address: data.deliveryType === 'delivery' ? data.address : undefined,
+        customerName: data.name,
+        customerPhone: data.phone,
+        paymentMethod: data.paymentMethod,
       },
-      onError: (err) => {
-        toast.error(err instanceof Error ? err.message : 'Erro ao criar pedido');
+      {
+        onSuccess: (response) => {
+          if (!response || 'error' in response) {
+            toast.error('error' in response ? response.error : 'Erro ao criar pedido');
+            return;
+          }
+          setOrderId(response.orderId);
+          if (data.paymentMethod === 'pix') {
+            router.push(`/${slug}/pedido/${response.orderId}`);
+            clearCart();
+          } else {
+            setShowPaymentModal(true);
+          }
+        },
+        onError: (err) => toast.error(err instanceof Error ? err.message : 'Erro ao criar pedido'),
       }
-    });
+    );
   };
 
   const handlePaymentSuccess = (token: string) => {
-    if (!orderId) return;
-
-    payOrder({
-      id: orderId,
-      paymentData: {
-        token,
-        method: checkoutData.paymentMethod,
+    if (!orderId || !checkoutData) return;
+    payOrder(
+      { id: orderId, paymentData: { token, method: checkoutData.paymentMethod, gateway: tenant?.gateway ?? '' } },
+      {
+        onSuccess: () => {
+          toast.success('Pagamento processado!');
+          setShowPaymentModal(false);
+          clearCart();
+          router.push(`/${slug}/pedido/${orderId}`);
+        },
+        onError: (err) => toast.error(err instanceof Error ? err.message : 'Erro no pagamento'),
       }
-    }, {
-      onSuccess: () => {
-        toast.success('Pagamento processado!');
-        setShowPaymentModal(false);
-        clearCart();
-        router.push(`/${slug}/pedido/${orderId}`);
-      },
-      onError: (err) => {
-        toast.error(err instanceof Error ? err.message : 'Erro no pagamento');
-      }
-    });
+    );
   };
 
-  if (isEmpty && !orderId) {
-    router.push(`/${slug}/cart`);
-    return null;
-  }
+  useEffect(() => {
+    if (isEmpty && !orderId) {
+      router.push(`/${slug}/cart`);
+    }
+  }, [isEmpty, orderId, router, slug]);
+
+  if (isEmpty && !orderId) return null;
 
   return (
-    <main className="flex-1 flex flex-col bg-[#fcfcfc] overflow-y-auto no-scrollbar">
-      <header className="flex items-center px-6 py-12 sticky top-0 bg-[#fcfcfc]/80 backdrop-blur-md z-10">
-        <Link
-          href={`/${slug}/cart`}
-          className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-black/5 active:scale-95 transition-transform"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-800" />
-        </Link>
-        <h1 className="flex-1 text-center text-lg font-bold text-gray-900 mr-10">Checkout</h1>
-      </header>
-
-      <div className="px-6 pb-20">
-        <div className="bg-[var(--color-lime-primary)]/10 rounded-[32px] p-6 mb-8 border border-[var(--color-lime-primary)]/20">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">Resumo</span>
-            <span className="text-xs font-bold text-[var(--color-lime-primary)] bg-black px-3 py-1 rounded-full">
-              {items.length} ITENS
-            </span>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Subtotal</span>
-              <span className="font-bold text-gray-900">{formatCurrency(cartSubtotal)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Taxa de entrega</span>
-              <span className="font-bold text-gray-900">R$ {deliveryFee.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-lg pt-3 border-t border-black/5 mt-2">
-              <span className="font-bold text-gray-900">Total</span>
-              <span className="font-black text-gray-900">R$ {total.toFixed(2)}</span>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="sticky top-0 z-20 bg-white border-b border-gray-100">
+        <div className="max-w-5xl mx-auto px-5 py-4 flex items-center gap-4">
+          <Link href={`/${slug}/cart`} className="w-9 h-9 rounded-xl border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors">
+            <ArrowLeft className="w-4 h-4 text-gray-700" />
+          </Link>
+          <h1 className="font-black text-gray-900 text-lg">Checkout</h1>
+          <div className="ml-auto flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Compra segura
           </div>
         </div>
+      </header>
 
-        <CheckoutForm onSubmit={handleCheckoutSubmit} loading={isCreating} />
-      </div>
-
-      <Modal
-        open={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        title="Pagamento"
-      >
-        <div className="p-2">
-          <div className="mb-6 text-center">
-            <p className="text-sm text-gray-500 mb-1">Valor a pagar</p>
-            <p className="text-3xl font-black text-gray-900">R$ {total.toFixed(2)}</p>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-10">
+        <div className="lg:grid lg:grid-cols-3 lg:gap-8 items-start">
+          {/* Checkout form */}
+          <div className="lg:col-span-2">
+            <CheckoutForm onSubmit={handleCheckoutSubmit} loading={isCreating} />
           </div>
 
+          {/* Order summary sidebar */}
+          <aside className="mt-6 lg:mt-0">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sticky top-24">
+              <h2 className="font-bold text-gray-900 mb-4">Resumo</h2>
+
+              {/* Items */}
+              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto no-scrollbar">
+                {items.map((item) => (
+                  <div key={item.productId} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600 line-clamp-1 flex-1 mr-2">
+                      <span className="font-bold text-gray-900">{item.quantity}×</span> {item.name}
+                    </span>
+                    <span className="font-semibold text-gray-900 shrink-0">{formatCurrency(item.itemTotal)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-gray-100 pt-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Subtotal</span>
+                  <span className="font-semibold">{formatCurrency(cartSubtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Entrega</span>
+                  <span className="font-semibold">{formatCurrency(deliveryFee)}</span>
+                </div>
+                <div className="border-t border-gray-100 pt-2 flex justify-between text-base">
+                  <span className="font-bold text-gray-900">Total</span>
+                  <span className="font-black text-gray-900">{formatCurrency(total)}</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <Modal open={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Pagamento">
+        <div className="p-2">
+          <div className="text-center mb-6">
+            <p className="text-sm text-gray-400 mb-1">Valor a pagar</p>
+            <p className="text-3xl font-black text-gray-900">{formatCurrency(total)}</p>
+          </div>
           {tenant?.gateway === 'mercadopago' ? (
-            <PaymentFormMP
-              amount={total}
-              onSuccess={handlePaymentSuccess}
-              loading={isPaying}
-            />
+            <PaymentFormMP amount={total} onSuccess={handlePaymentSuccess} loading={isPaying} />
           ) : (
-            <PaymentFormPB
-              amount={total}
-              onSuccess={handlePaymentSuccess}
-              loading={isPaying}
-            />
+            <PaymentFormPB amount={total} onSuccess={handlePaymentSuccess} loading={isPaying} />
           )}
-          
-          <p className="mt-6 text-[10px] text-gray-400 text-center leading-relaxed">
-            Seus dados de pagamento são processados de forma segura pelo {tenant?.gateway === 'mercadopago' ? 'Mercado Pago' : 'PagBank'}. Não armazenamos os dados do seu cartão.
+          <p className="mt-4 text-[10px] text-gray-400 text-center leading-relaxed">
+            Dados processados com segurança por {tenant?.gateway === 'mercadopago' ? 'Mercado Pago' : 'PagBank'}. Não armazenamos dados do seu cartão.
           </p>
         </div>
       </Modal>
-    </main>
+    </div>
   );
 }

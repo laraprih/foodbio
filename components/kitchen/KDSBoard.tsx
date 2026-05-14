@@ -32,15 +32,16 @@ export default function KDSBoard({ tenantId }: KDSBoardProps) {
     },
   })
 
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: rawOrders, isLoading } = useQuery({
     queryKey: ['kds-orders', tenantId],
     queryFn: () => get<Order[]>(`/bff/api/kitchen/orders`),
     refetchInterval: POLL.KDS,
   })
+  const orders: Order[] = Array.isArray(rawOrders) ? rawOrders : []
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      patch<any>(`/bff/api/kitchen/orders/${id}/${status === 'preparing' ? 'start' : 'ready'}`),
+      patch<any>(`/bff/api/kitchen/orders/${id}/${status === 'preparing' ? 'start' : 'ready'}`, {}),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['kds-orders', tenantId] }),
     onError: () => toast.error('Erro ao atualizar pedido'),
   })
