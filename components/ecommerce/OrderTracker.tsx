@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface OrderTrackerProps {
   status: string;
+  horizontal?: boolean;
 }
 
 const steps = [
@@ -17,9 +18,58 @@ const steps = [
   { id: 'delivered',  label: 'Entregue',            desc: 'Pedido concluído', icon: CheckCircle },
 ];
 
-export default function OrderTracker({ status }: OrderTrackerProps) {
+export default function OrderTracker({ status, horizontal = false }: OrderTrackerProps) {
   const currentStepIndex = steps.findIndex((s) => s.id === status);
   const activeIndex = currentStepIndex === -1 ? 0 : currentStepIndex;
+
+  if (horizontal) {
+    return (
+      <div className="w-full overflow-x-auto no-scrollbar">
+        {/* Circles + connectors row */}
+        <div className="flex items-center min-w-max px-2">
+          {steps.map((step, index) => {
+            const isCompleted = index < activeIndex;
+            const isActive = index === activeIndex;
+            const Icon = step.icon;
+            return (
+              <React.Fragment key={step.id}>
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className={cn(
+                    'w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all border-2',
+                    isCompleted ? 'bg-[var(--color-lime-primary)] border-[var(--color-lime-primary)]' :
+                    isActive    ? 'bg-[var(--color-lime-primary)] border-[var(--color-lime-primary)] ring-4 ring-[var(--color-lime-primary)]/20' :
+                                  'bg-white border-gray-200'
+                  )}>
+                    {isCompleted
+                      ? <CheckCircle className="w-4 h-4 text-white" />
+                      : <Icon className={cn('w-4 h-4', isActive ? 'text-white' : 'text-gray-300')} />
+                    }
+                  </div>
+                  <span className={cn(
+                    'text-[10px] font-bold text-center leading-tight w-14',
+                    isCompleted || isActive ? 'text-gray-800' : 'text-gray-300'
+                  )}>
+                    {step.label}
+                  </span>
+                  {isActive && (
+                    <span className="text-[9px] font-black bg-[var(--color-lime-primary)] text-white px-1.5 py-0.5 rounded-full uppercase tracking-tight">
+                      Agora
+                    </span>
+                  )}
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={cn(
+                    'h-0.5 w-10 shrink-0 mx-1 mb-6 transition-colors',
+                    isCompleted ? 'bg-[var(--color-lime-primary)]' : 'bg-gray-100'
+                  )} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-0">

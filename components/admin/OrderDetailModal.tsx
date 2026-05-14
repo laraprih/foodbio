@@ -34,18 +34,18 @@ const PAYMENT_LABELS: Record<string, string> = {
   cash: 'Dinheiro',
 }
 
-const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  pending: 'Aguardando pagamento',
-  approved: 'Aprovado',
-  rejected: 'Rejeitado',
-  refunded: 'Estornado',
-}
-
 const PAYMENT_STATUS_COLORS: Record<string, string> = {
   pending: 'text-amber-600 bg-amber-50',
   approved: 'text-emerald-700 bg-emerald-50',
   rejected: 'text-red-600 bg-red-50',
   refunded: 'text-purple-600 bg-purple-50',
+}
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: 'Aguardando',
+  approved: 'Aprovado',
+  rejected: 'Rejeitado',
+  refunded: 'Estornado',
 }
 
 const NEXT_STATUS: Record<string, string> = {
@@ -75,15 +75,9 @@ interface OrderDetailModalProps {
 }
 
 export default function OrderDetailModal({
-  order,
-  open,
-  onClose,
-  onAdvance,
-  onCancel,
-  onRefund,
-  isAdvancing,
-  isCancelling,
-  isRefunding,
+  order, open, onClose,
+  onAdvance, onCancel, onRefund,
+  isAdvancing, isCancelling, isRefunding,
 }: OrderDetailModalProps) {
   if (!order) return null
 
@@ -103,98 +97,108 @@ export default function OrderDetailModal({
   const dateStr = createdAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 
   return (
-    <Modal open={open} onClose={onClose} size="lg">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-5 -mt-1">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-black text-gray-900 text-lg">
-              #{order.id.slice(-8).toUpperCase()}
-            </span>
-            <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full capitalize', STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-600')}>
-              {STATUS_LABELS[order.status] ?? order.status}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-400">
-            <Clock className="w-3 h-3" />
-            {dateStr} às {timeStr}
-          </div>
+    <Modal open={open} onClose={onClose} size="2xl">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between gap-3 mb-5 -mt-1 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="font-black text-gray-900 text-lg tracking-tight">
+            #{order.id.slice(-8).toUpperCase()}
+          </span>
+          <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full', STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-600')}>
+            {STATUS_LABELS[order.status] ?? order.status}
+          </span>
+          <span className={cn(
+            'flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full',
+            order.type === 'delivery' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'
+          )}>
+            {order.type === 'delivery'
+              ? <><Truck className="w-3 h-3" /> Delivery</>
+              : <><Store className="w-3 h-3" /> Retirada</>}
+          </span>
         </div>
-        <div className={cn(
-          'flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-full shrink-0',
-          order.type === 'delivery'
-            ? 'bg-blue-50 text-blue-700'
-            : 'bg-orange-50 text-orange-700'
-        )}>
-          {order.type === 'delivery'
-            ? <><Truck className="w-3.5 h-3.5" /> Delivery</>
-            : <><Store className="w-3.5 h-3.5" /> Retirada</>
-          }
-        </div>
+        <span className="flex items-center gap-1 text-xs text-gray-400 ml-auto">
+          <Clock className="w-3 h-3" />{dateStr} às {timeStr}
+        </span>
       </div>
 
-      <div className="space-y-4">
-        {/* Progress tracker */}
-        <section className="bg-gray-50 rounded-2xl p-4">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Progresso</p>
-          <OrderTracker status={order.status} />
-        </section>
+      {/* ── Tracker horizontal ── */}
+      <div className="bg-gray-50 rounded-2xl px-4 py-5 mb-5">
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">Progresso do pedido</p>
+        <OrderTracker status={order.status} horizontal />
+      </div>
 
-        {/* Customer + Delivery */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <section className="bg-gray-50 rounded-2xl p-4 space-y-3">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Cliente</p>
-            <div className="flex items-start gap-2.5">
+      {/* ── Duas colunas ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+
+        {/* Coluna esquerda: cliente + entrega + pagamento */}
+        <div className="space-y-4">
+          {/* Cliente */}
+          <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cliente</p>
+            <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 bg-white rounded-xl flex items-center justify-center shrink-0 border border-gray-100">
                 <User className="w-3.5 h-3.5 text-gray-400" />
               </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900">{order.customerName || '—'}</p>
-              </div>
+              <span className="text-sm font-bold text-gray-900">{order.customerName || '—'}</span>
             </div>
-            <div className="flex items-start gap-2.5">
+            <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 bg-white rounded-xl flex items-center justify-center shrink-0 border border-gray-100">
                 <Phone className="w-3.5 h-3.5 text-gray-400" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-700">{order.customerPhone || '—'}</p>
-              </div>
+              <span className="text-sm font-semibold text-gray-700">{order.customerPhone || '—'}</span>
             </div>
-          </section>
+          </div>
 
-          <section className="bg-gray-50 rounded-2xl p-4 space-y-3">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Entrega</p>
+          {/* Entrega */}
+          <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Entrega</p>
             <div className="flex items-start gap-2.5">
-              <div className="w-7 h-7 bg-white rounded-xl flex items-center justify-center shrink-0 border border-gray-100">
+              <div className="w-7 h-7 bg-white rounded-xl flex items-center justify-center shrink-0 border border-gray-100 mt-0.5">
                 <MapPin className="w-3.5 h-3.5 text-gray-400" />
               </div>
               <div>
                 {addr ? (
                   <>
-                    <p className="text-sm font-bold text-gray-900">
-                      {addr.street}, {addr.number}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {addr.neighborhood} — {addr.city}/{addr.state}
-                    </p>
-                    {addr.complement && (
-                      <p className="text-xs text-gray-400">{addr.complement}</p>
-                    )}
+                    <p className="text-sm font-bold text-gray-900">{addr.street}, {addr.number}</p>
+                    <p className="text-xs text-gray-500">{addr.neighborhood} — {addr.city}/{addr.state}</p>
+                    {addr.complement && <p className="text-xs text-gray-400">{addr.complement}</p>}
+                    {addr.cep && <p className="text-xs text-gray-400">CEP {addr.cep}</p>}
                   </>
                 ) : (
                   <p className="text-sm font-semibold text-gray-700">Retirada no balcão</p>
                 )}
               </div>
             </div>
-          </section>
+          </div>
+
+          {/* Pagamento */}
+          <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pagamento</p>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 bg-white rounded-xl flex items-center justify-center shrink-0 border border-gray-100">
+                {order.paymentMethod === 'pix'
+                  ? <Landmark className="w-3.5 h-3.5 text-emerald-500" />
+                  : <CreditCard className="w-3.5 h-3.5 text-blue-500" />}
+              </div>
+              <span className="text-sm font-bold text-gray-900">
+                {PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}
+              </span>
+              <span className={cn(
+                'ml-auto text-xs font-bold px-2 py-0.5 rounded-full',
+                PAYMENT_STATUS_COLORS[order.paymentStatus] ?? 'bg-gray-100 text-gray-600'
+              )}>
+                {PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Items */}
-        <section className="bg-gray-50 rounded-2xl p-4">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+        {/* Coluna direita: itens + totais */}
+        <div className="bg-gray-50 rounded-2xl p-4 flex flex-col">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
             Itens ({order.items?.length ?? 0})
           </p>
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 flex-1">
             {(order.items ?? []).map((item: any, idx: number) => (
               <div key={idx} className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -211,28 +215,9 @@ export default function OrderDetailModal({
               </div>
             ))}
           </div>
-        </section>
 
-        {/* Payment */}
-        <section className="bg-gray-50 rounded-2xl p-4">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Pagamento</p>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 bg-white rounded-xl flex items-center justify-center border border-gray-100">
-              {order.paymentMethod === 'pix'
-                ? <Landmark className="w-3.5 h-3.5 text-emerald-500" />
-                : <CreditCard className="w-3.5 h-3.5 text-blue-500" />}
-            </div>
-            <span className="text-sm font-bold text-gray-900">
-              {PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}
-            </span>
-            <span className={cn(
-              'ml-auto text-xs font-bold px-2.5 py-1 rounded-full',
-              PAYMENT_STATUS_COLORS[order.paymentStatus] ?? 'bg-gray-100 text-gray-600'
-            )}>
-              {PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus}
-            </span>
-          </div>
-          <div className="space-y-1.5 pt-3 border-t border-gray-200 text-sm">
+          {/* Totais */}
+          <div className="border-t border-gray-200 mt-4 pt-3 space-y-1.5 text-sm">
             <div className="flex justify-between text-gray-500">
               <span>Subtotal</span>
               <span>{formatCurrency(order.subtotal ?? 0)}</span>
@@ -241,51 +226,47 @@ export default function OrderDetailModal({
               <span>Taxa de entrega</span>
               <span>{formatCurrency(order.deliveryFee ?? 0)}</span>
             </div>
-            <div className="flex justify-between font-black text-gray-900 text-base pt-1.5 border-t border-gray-200">
+            <div className="flex justify-between font-black text-gray-900 text-base pt-2 border-t border-gray-200">
               <span>Total</span>
               <span>{formatCurrency(order.total ?? 0)}</span>
             </div>
           </div>
-        </section>
+        </div>
+      </div>
 
-        {/* Actions */}
-        <div className="flex flex-col gap-2 pt-1">
-          {canAdvance && (
+      {/* ── Ações ── */}
+      <div className="flex flex-col gap-2">
+        {canAdvance && (
+          <button
+            onClick={() => { onAdvance(order.id, nextStatus); onClose() }}
+            disabled={isAdvancing}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[var(--color-lime-primary)] text-white font-bold text-sm hover:brightness-90 transition-all disabled:opacity-50"
+          >
+            <ChevronRight className="w-4 h-4" />
+            {NEXT_STATUS_LABELS[nextStatus] ?? `Avançar para ${nextStatus}`}
+          </button>
+        )}
+        <div className={cn('grid gap-2', canRefund && canCancel ? 'grid-cols-2' : 'grid-cols-1')}>
+          {canRefund && (
             <button
-              onClick={() => { onAdvance(order.id, nextStatus); onClose() }}
-              disabled={isAdvancing}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[var(--color-lime-primary)] text-white font-bold text-sm hover:brightness-90 transition-all disabled:opacity-50"
+              onClick={() => { onRefund(order.id); onClose() }}
+              disabled={isRefunding}
+              className="flex items-center justify-center gap-1.5 py-3 rounded-2xl border-2 border-purple-200 text-purple-700 font-bold text-sm hover:bg-purple-50 transition-all disabled:opacity-50"
             >
-              <ChevronRight className="w-4 h-4" />
-              {NEXT_STATUS_LABELS[nextStatus] ?? `Avançar para ${nextStatus}`}
+              <RotateCcw className="w-3.5 h-3.5" />
+              Estornar pagamento
             </button>
           )}
-
-          <div className="grid grid-cols-2 gap-2">
-            {canRefund && (
-              <button
-                onClick={() => { onRefund(order.id); onClose() }}
-                disabled={isRefunding}
-                className="flex items-center justify-center gap-1.5 py-3 rounded-2xl border-2 border-purple-200 text-purple-700 font-bold text-sm hover:bg-purple-50 transition-all disabled:opacity-50"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Estornar
-              </button>
-            )}
-            {canCancel && (
-              <button
-                onClick={() => { onCancel(order.id); onClose() }}
-                disabled={isCancelling}
-                className={cn(
-                  'flex items-center justify-center gap-1.5 py-3 rounded-2xl border-2 border-red-200 text-red-600 font-bold text-sm hover:bg-red-50 transition-all disabled:opacity-50',
-                  !canRefund && 'col-span-2'
-                )}
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                Cancelar pedido
-              </button>
-            )}
-          </div>
+          {canCancel && (
+            <button
+              onClick={() => { onCancel(order.id); onClose() }}
+              disabled={isCancelling}
+              className="flex items-center justify-center gap-1.5 py-3 rounded-2xl border-2 border-red-200 text-red-600 font-bold text-sm hover:bg-red-50 transition-all disabled:opacity-50"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              Cancelar pedido
+            </button>
+          )}
         </div>
       </div>
     </Modal>

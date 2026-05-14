@@ -11,7 +11,7 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 }
 
 export default function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
@@ -36,6 +36,8 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
     sm: 'sm:max-w-sm',
     md: 'sm:max-w-md',
     lg: 'sm:max-w-lg',
+    xl: 'sm:max-w-2xl',
+    '2xl': 'sm:max-w-3xl',
   };
 
   return createPortal(
