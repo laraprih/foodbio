@@ -2,30 +2,40 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useState, use, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useCart } from '@/hooks/use-cart';
+import { useCartStore } from '@/store/cart-store';
 import { useCreateOrder, usePayOrder } from '@/hooks/use-orders';
 import CheckoutForm from '@/components/ecommerce/CheckoutForm';
 import PaymentFormMP from '@/components/ecommerce/PaymentFormMP';
 import PaymentFormPB from '@/components/ecommerce/PaymentFormPB';
 import Modal from '@/components/ui/Modal';
-import useSessionStore from '@/store/session-store';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 import type { CheckoutData } from '@/types';
 
-export default function CheckoutPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params);
+interface StoreInfo {
+  id: string;
+  name: string;
+  slug: string;
+  deliveryFee: number;
+  gateway: 'mercadopago' | 'pagbank' | null;
+}
+
+export default function CheckoutPage() {
+  const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
-  const { tenant } = useSessionStore();
   const { data: session } = useSession();
   const customer = session?.user as any;
-  const { items, total, cartSubtotal, deliveryFee, isEmpty, clearCart } = useCart();
 
+  const { items, total, cartSubtotal, deliveryFee, isEmpty, clearCart } = useCart();
+  const restaurantId = useCartStore((s) => s.restaurantId);
+
+  const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
@@ -33,13 +43,40 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
   const { mutate: createOrder, isPending: isCreating } = useCreateOrder();
   const { mutate: payOrder, isPending: isPaying } = usePayOrder();
 
+  // Fetch store info from slug (resolves gateway and actual deliveryFee)
+  useEffect(() => {
+    if (!slug) return;
+    fetch(`/api/store/${slug}/info`)
+      .then((r) => r.json())
+      .then((data) => { if (!data.error) setStoreInfo(data) })
+      .catch(() => {});
+  }, [slug]);
+
+  useEffect(() => {
+    if (isEmpty && !orderId) {
+      router.push(`/${slug}/cart`);
+    }
+  }, [isEmpty, orderId, router, slug]);
+
+  if (isEmpty && !orderId) return null;
+
   const handleCheckoutSubmit = (data: CheckoutData) => {
-    if (!tenant) return;
+    const tenantId = storeInfo?.id ?? restaurantId;
+
+    if (!tenantId) {
+      toast.error('Erro ao identificar a loja. Volte ao cardápio e tente novamente.');
+      return;
+    }
+
     setCheckoutData(data);
     createOrder(
       {
-        restaurantId: tenant.id,
-        items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, options: i.selectedOptions.map((o) => o.optionId) })),
+        restaurantId: tenantId,
+        items: items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          options: i.selectedOptions.map((o) => o.optionId),
+        })),
         deliveryType: data.deliveryType,
         address: data.deliveryType === 'delivery' ? data.address : undefined,
         customerName: data.name,
@@ -50,7 +87,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
       {
         onSuccess: (response) => {
           if (!response || 'error' in response) {
-            toast.error('error' in response ? (response as any).error : 'Erro ao criar pedido');
+            toast.error((response as any)?.error ?? 'Erro ao criar pedido');
             return;
           }
           setOrderId(response.orderId);
@@ -69,7 +106,10 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
   const handlePaymentSuccess = (token: string) => {
     if (!orderId || !checkoutData) return;
     payOrder(
-      { id: orderId, paymentData: { token, method: checkoutData.paymentMethod, gateway: tenant?.gateway ?? '' } },
+      {
+        id: orderId,
+        paymentData: { token, method: checkoutData.paymentMethod, gateway: storeInfo?.gateway ?? '' },
+      },
       {
         onSuccess: () => {
           toast.success('Pagamento processado!');
@@ -82,20 +122,15 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
     );
   };
 
-  useEffect(() => {
-    if (isEmpty && !orderId) {
-      router.push(`/${slug}/cart`);
-    }
-  }, [isEmpty, orderId, router, slug]);
-
-  if (isEmpty && !orderId) return null;
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-5 py-4 flex items-center gap-4">
-          <Link href={`/${slug}/cart`} className="w-9 h-9 rounded-xl border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors">
+          <Link
+            href={`/${slug}/cart`}
+            className="w-9 h-9 rounded-xl border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors"
+          >
             <ArrowLeft className="w-4 h-4 text-gray-700" />
           </Link>
           <h1 className="font-black text-gray-900 text-lg">Checkout</h1>
@@ -123,7 +158,6 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sticky top-24">
               <h2 className="font-bold text-gray-900 mb-4">Resumo</h2>
 
-              {/* Items */}
               <div className="space-y-2 mb-4 max-h-48 overflow-y-auto no-scrollbar">
                 {items.map((item) => (
                   <div key={item.productId} className="flex justify-between items-center text-sm">
@@ -142,11 +176,15 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Entrega</span>
-                  <span className="font-semibold">{formatCurrency(deliveryFee)}</span>
+                  <span className="font-semibold">
+                    {storeInfo ? formatCurrency(storeInfo.deliveryFee) : formatCurrency(deliveryFee)}
+                  </span>
                 </div>
                 <div className="border-t border-gray-100 pt-2 flex justify-between text-base">
                   <span className="font-bold text-gray-900">Total</span>
-                  <span className="font-black text-gray-900">{formatCurrency(total)}</span>
+                  <span className="font-black text-gray-900">
+                    {formatCurrency(cartSubtotal + (storeInfo?.deliveryFee ?? deliveryFee))}
+                  </span>
                 </div>
               </div>
             </div>
@@ -158,15 +196,26 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
         <div className="p-2">
           <div className="text-center mb-6">
             <p className="text-sm text-gray-400 mb-1">Valor a pagar</p>
-            <p className="text-3xl font-black text-gray-900">{formatCurrency(total)}</p>
+            <p className="text-3xl font-black text-gray-900">
+              {formatCurrency(cartSubtotal + (storeInfo?.deliveryFee ?? deliveryFee))}
+            </p>
           </div>
-          {tenant?.gateway === 'mercadopago' ? (
-            <PaymentFormMP amount={total} onSuccess={handlePaymentSuccess} loading={isPaying} />
+          {storeInfo?.gateway === 'mercadopago' ? (
+            <PaymentFormMP
+              amount={cartSubtotal + (storeInfo?.deliveryFee ?? deliveryFee)}
+              onSuccess={handlePaymentSuccess}
+              loading={isPaying}
+            />
           ) : (
-            <PaymentFormPB amount={total} onSuccess={handlePaymentSuccess} loading={isPaying} />
+            <PaymentFormPB
+              amount={cartSubtotal + (storeInfo?.deliveryFee ?? deliveryFee)}
+              onSuccess={handlePaymentSuccess}
+              loading={isPaying}
+            />
           )}
           <p className="mt-4 text-[10px] text-gray-400 text-center leading-relaxed">
-            Dados processados com segurança por {tenant?.gateway === 'mercadopago' ? 'Mercado Pago' : 'PagBank'}. Não armazenamos dados do seu cartão.
+            Dados processados com segurança por{' '}
+            {storeInfo?.gateway === 'mercadopago' ? 'Mercado Pago' : 'PagBank'}.
           </p>
         </div>
       </Modal>
