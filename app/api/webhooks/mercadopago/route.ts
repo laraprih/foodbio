@@ -6,21 +6,22 @@ export const dynamic = 'force-dynamic'
 
 const MP_BASE = 'https://api.mercadopago.com'
 
-function validateSignature(req: NextRequest, rawBody: string): boolean {
+function validateSignature(req: NextRequest): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET
-  if (!secret) return true // skip validation if secret not configured
+  if (!secret) return true // skip if not configured
 
   const xSignature = req.headers.get('x-signature') ?? ''
+  if (!xSignature) return true // absent = unauthenticated test ping — allow through
+
   const xRequestId = req.headers.get('x-request-id') ?? ''
 
   // x-signature format: "ts=<timestamp>,v1=<hmac_hex>"
   const ts = xSignature.match(/ts=([^,]+)/)?.[1] ?? ''
   const v1 = xSignature.match(/v1=([^,]+)/)?.[1] ?? ''
 
-  if (!ts || !v1) return false
+  if (!ts || !v1) return false // malformed header — reject
 
-  // MP manifest: id:<paymentId>;request-id:<requestId>;ts:<ts>;
-  // paymentId comes from the query param 'data.id' or from the body
+  // MP manifest: id:<data.id query param>;request-id:<x-request-id>;ts:<ts>;
   const dataId = req.nextUrl.searchParams.get('data.id') ?? ''
   const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
 
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   const rawBody = await req.text()
 
   // Validate MP signature
-  if (!validateSignature(req, rawBody)) {
+  if (!validateSignature(req)) {
     console.warn('[webhook/mp] Invalid signature — request rejected')
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }

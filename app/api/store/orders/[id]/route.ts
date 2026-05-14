@@ -3,9 +3,9 @@ import { getPool } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const pool = getPool()
-  const { id } = params
+  const { id } = await params
 
   const orderRes = await pool.query(
     `SELECT o.*, pt."payloadResponse" AS pix_payload
