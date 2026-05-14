@@ -8,6 +8,7 @@ import Input from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Truck, Store, CreditCard, Landmark, ArrowRight, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'react-hot-toast';
 import type { CheckoutData } from '@/types';
 
 interface CheckoutFormProps {
@@ -27,6 +28,7 @@ function maskCep(value: string) {
 export default function CheckoutForm({ onSubmit, loading, defaultName, defaultPhone }: CheckoutFormProps) {
   const { register, handleSubmit, watch, setValue, setFocus, formState: { errors } } = useForm<CheckoutData>({
     resolver: zodResolver(checkoutSchema),
+    shouldUnregister: true,
     defaultValues: { deliveryType: 'delivery', paymentMethod: 'pix', name: defaultName ?? '', phone: defaultPhone ?? '' },
   });
 
@@ -67,8 +69,12 @@ export default function CheckoutForm({ onSubmit, loading, defaultName, defaultPh
     }
   };
 
+  const handleInvalid = () => {
+    toast.error('Preencha todos os campos obrigatórios antes de continuar.');
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit, handleInvalid)} className="space-y-6">
       {/* Delivery Type */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
