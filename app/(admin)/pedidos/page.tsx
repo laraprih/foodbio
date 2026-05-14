@@ -41,7 +41,7 @@ export default function PedidosPage() {
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders-full'],
-    queryFn: () => get<any[]>('/bff/api/admin/orders'),
+    queryFn: () => get<any[]>('/api/admin/orders'),
     refetchInterval: 15000,
   })
 
@@ -52,7 +52,7 @@ export default function PedidosPage() {
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      patch(`/bff/api/admin/orders/${id}/status`, { status }),
+      patch(`/api/admin/orders/${id}`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders-full'] })
       toast.success('Pedido atualizado')
@@ -61,7 +61,7 @@ export default function PedidosPage() {
   })
 
   const cancelOrder = useMutation({
-    mutationFn: (id: string) => patch(`/bff/api/admin/orders/${id}/cancel`, {}),
+    mutationFn: (id: string) => patch(`/api/admin/orders/${id}`, { status: 'cancelled' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders-full'] })
       toast.success('Pedido cancelado')
