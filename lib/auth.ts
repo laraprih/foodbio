@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import FacebookProvider from 'next-auth/providers/facebook'
 import type { JWT } from 'next-auth/jwt'
+import { getPool } from '@/lib/db'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -16,25 +17,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const res = await fetch(`${API_URL}/api/auth/login`, {
-          method: 'POST',
-          body: JSON.stringify(credentials),
-          headers: { 'Content-Type': 'application/json' },
-        })
+        // Direct DB auth — works without the Fastify API
+        try {
+          const pool = getPool()
+          const { rows } = await pool.query(
+            'SELECT id, name, email, "passwordHash", role, "tenantId" FROM "User" WHERE email = $1 AND active = true',
+            [credentials.email]
+          )
+          const user = rows[0]
+          if (!user || !user.passwordHash) return null
 
-        if (!res.ok) return null
+          const argon2 = await import('argon2')
+          const valid = await argon2.verify(user.passwordHash, credentials.password as string)
+          if (!valid) return null
 
-        const body = await res.json()
-        const { token, user } = body
-        if (!user?.id) return null
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          tenantId: user.tenantId,
-          accessToken: token,
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            tenantId: user.tenantId,
+            accessToken: null,
+          }
+        } catch {
+          // Fallback to Fastify API if direct DB fails
+          const res = await fetch(`${API_URL}/api/auth/login`, {
+            method: 'POST',
+            body: JSON.stringify(credentials),
+            headers: { 'Content-Type': 'application/json' },
+          })
+          if (!res.ok) return null
+          const { token, user } = await res.json()
+          if (!user?.id) return null
+          return { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId, accessToken: token }
         }
       },
     }),
