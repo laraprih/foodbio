@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Home as HomeIcon, ShoppingBag, Heart, User, LayoutGrid, List } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import HomeHeader from '@/components/ecommerce/HomeHeader';
 import CategoryBar from '@/components/ecommerce/CategoryBar';
@@ -48,6 +49,9 @@ interface RestaurantShellProps {
 export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellProps) {
   const { setTenant } = useSessionStore();
   const { addToCart, count: cartCount } = useCart();
+  const { data: session } = useSession();
+  const customer = session?.user as any;
+  const isLoggedIn = customer?.role === 'customer' && !!customer?.tenantId;
   const [activeCategoryId, setActiveCategoryId] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [gridLayout, setGridLayout] = useState<'grid' | 'list'>('grid');
@@ -225,9 +229,20 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
             <Heart className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
             <span className="text-[10px] font-semibold text-gray-400">Favoritos</span>
           </button>
-          <Link href="/login" className="flex flex-col items-center gap-1 group">
-            <User className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
-            <span className="text-[10px] font-semibold text-gray-400">Perfil</span>
+          <Link href={isLoggedIn ? `/${slug}/conta` : `/${slug}/login`} className="flex flex-col items-center gap-1 group">
+            {isLoggedIn ? (
+              <>
+                <div className="w-5 h-5 bg-[var(--color-lime-primary)] rounded-full flex items-center justify-center">
+                  <span className="text-[9px] font-black text-white">{customer.name?.charAt(0).toUpperCase()}</span>
+                </div>
+                <span className="text-[10px] font-semibold text-[var(--color-lime-primary)]">Conta</span>
+              </>
+            ) : (
+              <>
+                <User className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
+                <span className="text-[10px] font-semibold text-gray-400">Entrar</span>
+              </>
+            )}
           </Link>
         </div>
       </nav>

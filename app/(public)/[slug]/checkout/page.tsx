@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState, use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { useCart } from '@/hooks/use-cart';
 import { useCreateOrder, usePayOrder } from '@/hooks/use-orders';
 import CheckoutForm from '@/components/ecommerce/CheckoutForm';
@@ -21,6 +22,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
   const { slug } = use(params);
   const router = useRouter();
   const { tenant } = useSessionStore();
+  const { data: session } = useSession();
+  const customer = session?.user as any;
   const { items, total, cartSubtotal, deliveryFee, isEmpty, clearCart } = useCart();
 
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -106,7 +109,12 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
         <div className="lg:grid lg:grid-cols-3 lg:gap-8 items-start">
           {/* Checkout form */}
           <div className="lg:col-span-2">
-            <CheckoutForm onSubmit={handleCheckoutSubmit} loading={isCreating} />
+            <CheckoutForm
+              onSubmit={handleCheckoutSubmit}
+              loading={isCreating}
+              defaultName={customer?.role === 'customer' ? customer?.name ?? '' : ''}
+              defaultPhone={customer?.role === 'customer' ? customer?.phone ?? '' : ''}
+            />
           </div>
 
           {/* Order summary sidebar */}

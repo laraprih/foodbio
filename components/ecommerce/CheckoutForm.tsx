@@ -13,6 +13,8 @@ import type { CheckoutData } from '@/types';
 interface CheckoutFormProps {
   onSubmit: (data: CheckoutData) => void;
   loading?: boolean;
+  defaultName?: string;
+  defaultPhone?: string;
 }
 
 type CepStatus = 'idle' | 'loading' | 'found' | 'error';
@@ -22,10 +24,10 @@ function maskCep(value: string) {
   return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
 }
 
-export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
+export default function CheckoutForm({ onSubmit, loading, defaultName, defaultPhone }: CheckoutFormProps) {
   const { register, handleSubmit, watch, setValue, setFocus, formState: { errors } } = useForm<CheckoutData>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { deliveryType: 'delivery', paymentMethod: 'pix' },
+    defaultValues: { deliveryType: 'delivery', paymentMethod: 'pix', name: defaultName ?? '', phone: defaultPhone ?? '' },
   });
 
   const deliveryType = watch('deliveryType');

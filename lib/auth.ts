@@ -13,15 +13,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Senha', type: 'password' },
+        slug: { label: 'Slug', type: 'text' }, // present on customer (store) login
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        // Direct DB auth — works without the Fastify API
         try {
           const pool = getPool()
+
+          if (credentials.slug) {
+            // Customer login: find user scoped to this tenant
+            const tenantRes = await pool.query('SELECT id FROM "Tenant" WHERE slug = $1 AND active = true', [credentials.slug])
+            const tenant = tenantRes.rows[0]
+            if (!tenant) return null
+
+            const { rows } = await pool.query(
+              'SELECT id, name, email, phone, "passwordHash", role, "tenantId" FROM "User" WHERE email = $1 AND "tenantId" = $2 AND role = \'customer\' AND active = true',
+              [credentials.email, tenant.id]
+            )
+            const user = rows[0]
+            if (!user || !user.passwordHash) return null
+
+            const argon2 = await import('argon2')
+            const valid = await argon2.verify(user.passwordHash, credentials.password as string)
+            if (!valid) return null
+
+            return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, tenantId: user.tenantId, accessToken: null }
+          }
+
+          // Admin / superadmin login: global email lookup
           const { rows } = await pool.query(
-            'SELECT id, name, email, "passwordHash", role, "tenantId" FROM "User" WHERE email = $1 AND active = true',
+            'SELECT id, name, email, phone, "passwordHash", role, "tenantId" FROM "User" WHERE email = $1 AND active = true',
             [credentials.email]
           )
           const user = rows[0]
@@ -31,16 +53,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const valid = await argon2.verify(user.passwordHash, credentials.password as string)
           if (!valid) return null
 
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            tenantId: user.tenantId,
-            accessToken: null,
-          }
+          return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, tenantId: user.tenantId, accessToken: null }
         } catch {
-          // Fallback to Fastify API if direct DB fails
+          if (credentials.slug) return null // never fall back to Fastify for customer login
           const res = await fetch(`${API_URL}/api/auth/login`, {
             method: 'POST',
             body: JSON.stringify(credentials),
@@ -74,6 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as any).role
         token.tenantId = (user as any).tenantId
         token.accessToken = (user as any).accessToken
+        token.phone = (user as any).phone ?? null
       }
 
       // Facebook / Instagram login — troca o token FB pelo JWT interno
@@ -107,6 +123,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         (session.user as any).role = token.role
         ;(session.user as any).tenantId = token.tenantId
         ;(session.user as any).id = token.sub
+        ;(session.user as any).phone = token.phone ?? null
       }
       return session
     },
