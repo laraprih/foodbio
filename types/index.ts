@@ -46,6 +46,9 @@ export interface Order {
   items: OrderItem[]
   address?: Address
   externalReference?: string
+  pixQrCode?: string
+  pixQrBase64?: string
+  pixExpiresAt?: string
 }
 
 // ── Delivery domain ───────────────────────────────────────────────────────────

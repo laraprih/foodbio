@@ -45,17 +45,18 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
         customerName: data.name,
         customerPhone: data.phone,
         paymentMethod: data.paymentMethod,
+        payerEmail: customer?.email ?? undefined,
       },
       {
         onSuccess: (response) => {
           if (!response || 'error' in response) {
-            toast.error('error' in response ? response.error : 'Erro ao criar pedido');
+            toast.error('error' in response ? (response as any).error : 'Erro ao criar pedido');
             return;
           }
           setOrderId(response.orderId);
           if (data.paymentMethod === 'pix') {
-            router.push(`/${slug}/pedido/${response.orderId}`);
             clearCart();
+            window.location.href = `/${slug}/pedido/${response.orderId}`;
           } else {
             setShowPaymentModal(true);
           }

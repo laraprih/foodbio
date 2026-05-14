@@ -2,10 +2,10 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { use, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Phone, CreditCard, Package } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, MapPin, Phone, CreditCard, Package, Copy, CheckCircle2, Clock } from 'lucide-react';
 import { useOrder } from '@/hooks/use-orders';
 import { useSocket } from '@/hooks/use-socket';
 import OrderTracker from '@/components/ecommerce/OrderTracker';
@@ -13,9 +13,10 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import Badge from '@/components/ui/Badge';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
+import Image from 'next/image';
 
-export default function OrderStatusPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
-  const { slug, id } = use(params);
+export default function OrderStatusPage() {
+  const { slug, id } = useParams<{ slug: string; id: string }>();
   const router = useRouter();
   const { socket, connected } = useSocket(`order:${id}`);
   const { data: order, isLoading, refetch } = useOrder(id, connected);
@@ -39,40 +40,9 @@ export default function OrderStatusPage({ params }: { params: Promise<{ slug: st
             <Skeleton className="h-6 w-24 rounded-full ml-auto" />
           </div>
         </header>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-          <div className="lg:grid lg:grid-cols-5 lg:gap-8 items-start">
-            <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 p-6 mb-5 lg:mb-0 space-y-6">
-              <Skeleton className="h-5 w-36" />
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="w-8 h-8 rounded-full shrink-0" />
-                  <Skeleton className="h-4 flex-1" />
-                </div>
-              ))}
-            </div>
-            <div className="lg:col-span-2 space-y-4">
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
-                <Skeleton className="h-3.5 w-32" />
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <Skeleton className="w-8 h-8 rounded-xl shrink-0" />
-                    <div className="space-y-1.5 flex-1">
-                      <Skeleton className="h-3 w-16" />
-                      <Skeleton className="h-4 w-full" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-gray-50 rounded-2xl p-5 space-y-3">
-                <Skeleton className="h-3.5 w-24" />
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="flex justify-between">
-                    <Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-16" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+          <Skeleton className="h-48 w-full rounded-2xl" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
         </div>
       </div>
     );
@@ -93,9 +63,12 @@ export default function OrderStatusPage({ params }: { params: Promise<{ slug: st
     );
   }
 
+  const isPix = order.paymentMethod === 'pix';
+  const pixPending = isPix && order.paymentStatus === 'pending';
+  const pixApproved = isPix && order.paymentStatus === 'approved';
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="sticky top-0 z-20 bg-white border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-5 py-4 flex items-center gap-4">
           <Link href={`/${slug}`} className="w-9 h-9 rounded-xl border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors">
@@ -111,15 +84,89 @@ export default function OrderStatusPage({ params }: { params: Promise<{ slug: st
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
         <div className="lg:grid lg:grid-cols-5 lg:gap-8 items-start">
-          {/* Order tracker */}
-          <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-5 lg:mb-0">
-            <h2 className="font-bold text-gray-900 mb-6">Acompanhamento</h2>
-            <OrderTracker status={order.status} />
+
+          {/* Left column */}
+          <div className="lg:col-span-3 space-y-4 mb-5 lg:mb-0">
+
+            {/* PIX payment section */}
+            {isPix && (
+              <div className={`rounded-2xl border shadow-sm p-6 ${pixApproved ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-100'}`}>
+                {pixApproved ? (
+                  <div className="flex flex-col items-center text-center gap-3">
+                    <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center">
+                      <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                    </div>
+                    <p className="font-black text-emerald-800 text-lg">Pagamento confirmado!</p>
+                    <p className="text-emerald-600 text-sm">Seu pedido está sendo preparado.</p>
+                  </div>
+                ) : pixPending && order.pixQrCode ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <Clock className="w-4 h-4" />
+                      <p className="text-sm font-bold">Aguardando pagamento PIX</p>
+                    </div>
+                    <p className="text-xs text-gray-500 text-center">
+                      Escaneie o QR Code ou copie o código Pix Copia e Cola
+                    </p>
+
+                    {order.pixQrBase64 && (
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                        <Image
+                          src={`data:image/png;base64,${order.pixQrBase64}`}
+                          alt="QR Code PIX"
+                          width={200}
+                          height={200}
+                          className="mx-auto"
+                          unoptimized
+                        />
+                      </div>
+                    )}
+
+                    <div className="w-full">
+                      <p className="text-xs text-gray-400 font-medium mb-1.5">Pix Copia e Cola</p>
+                      <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-3 border border-gray-200">
+                        <p className="text-xs text-gray-600 flex-1 break-all line-clamp-2 font-mono">
+                          {order.pixQrCode}
+                        </p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(order.pixQrCode!);
+                            toast.success('Código copiado!');
+                          }}
+                          className="shrink-0 p-1.5 rounded-lg bg-[var(--color-lime-primary)] text-white hover:brightness-90"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {order.pixExpiresAt && (
+                      <p className="text-xs text-gray-400">
+                        Expira em: {new Date(order.pixExpiresAt).toLocaleString('pt-BR')}
+                      </p>
+                    )}
+                  </div>
+                ) : pixPending && !order.pixQrCode ? (
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <Clock className="w-8 h-8 text-amber-500" />
+                    <p className="text-sm font-bold text-amber-700">QR Code PIX não gerado</p>
+                    <p className="text-xs text-gray-400">O gateway de pagamento não está configurado. Entre em contato com a loja.</p>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* Order tracker (hide when PIX pending) */}
+            {!pixPending && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <h2 className="font-bold text-gray-900 mb-6">Acompanhamento</h2>
+                <OrderTracker status={order.status} />
+              </div>
+            )}
           </div>
 
-          {/* Details sidebar */}
+          {/* Right column */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Delivery info */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Detalhes da entrega</h3>
               <div className="space-y-3">
@@ -157,7 +204,6 @@ export default function OrderStatusPage({ params }: { params: Promise<{ slug: st
               </div>
             </div>
 
-            {/* Order items */}
             <div className="bg-[var(--color-app-bg)] rounded-2xl p-5 border border-[var(--color-lime-primary)]/15">
               <h3 className="text-xs font-bold text-[var(--color-lime-primary)] uppercase tracking-wider mb-3">Itens do pedido</h3>
               <div className="space-y-2.5 mb-4">
@@ -165,12 +211,7 @@ export default function OrderStatusPage({ params }: { params: Promise<{ slug: st
                   <div key={idx} className="flex items-start justify-between gap-2 text-sm">
                     <div className="flex gap-2 flex-1 min-w-0">
                       <span className="font-black text-[var(--color-lime-primary)] shrink-0">{item.quantity}×</span>
-                      <div className="min-w-0">
-                        <p className="font-semibold line-clamp-1">{item.product.name}</p>
-                        {item.options?.map((o: any, i: number) => (
-                          <p key={i} className="text-[10px] text-zinc-400">{o.name}</p>
-                        ))}
-                      </div>
+                      <p className="font-semibold line-clamp-1">{item.product.name}</p>
                     </div>
                     <span className="text-zinc-400 shrink-0 text-sm">{formatCurrency(item.price * item.quantity)}</span>
                   </div>
