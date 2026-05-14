@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { getPool } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 
 function requireSuperAdmin(session: any) {
   return session && (session.user as any).role === 'superadmin'
@@ -29,18 +30,51 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  if (fields.length === 0) return NextResponse.json({ error: 'Nada para atualizar' }, { status: 400 })
+  if (fields.length > 0) {
+    fields.push(`"updatedAt" = NOW()`)
+    values.push(id)
 
-  fields.push(`"updatedAt" = NOW()`)
-  values.push(id)
+    const { rows } = await pool.query(
+      `UPDATE "Tenant" SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, slug, name, "planStatus", "planPrice", "planDueDate", active`,
+      values
+    )
+    if (rows.length === 0) return NextResponse.json({ error: 'Empresa não encontrada' }, { status: 404 })
+  }
 
-  const { rows } = await pool.query(
-    `UPDATE "Tenant" SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, slug, name, "planStatus", "planPrice", "planDueDate", active`,
-    values
-  )
+  // Update admin user credentials if provided
+  const { adminEmail, adminPassword } = body
+  if (adminEmail || adminPassword) {
+    const adminFields: string[] = []
+    const adminValues: any[] = []
+    let aidx = 1
 
-  if (rows.length === 0) return NextResponse.json({ error: 'Empresa não encontrada' }, { status: 404 })
-  return NextResponse.json(rows[0])
+    if (adminEmail) {
+      adminFields.push(`email = $${aidx}`)
+      adminValues.push(adminEmail)
+      aidx++
+    }
+
+    if (adminPassword) {
+      let passwordHash: string
+      try {
+        const argon2 = require('argon2')
+        passwordHash = await argon2.hash(adminPassword)
+      } catch {
+        passwordHash = `$temp$${crypto.randomBytes(16).toString('hex')}`
+      }
+      adminFields.push(`"passwordHash" = $${aidx}`)
+      adminValues.push(passwordHash)
+      aidx++
+    }
+
+    adminValues.push(id)
+    await pool.query(
+      `UPDATE "User" SET ${adminFields.join(', ')} WHERE "tenantId" = $${aidx} AND role = 'admin'`,
+      adminValues
+    )
+  }
+
+  return NextResponse.json({ ok: true })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

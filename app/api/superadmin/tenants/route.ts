@@ -47,7 +47,9 @@ export async function GET(req: NextRequest) {
        t.id, t.slug, t.name, t.phone, t.address, t.city, t.state,
        t.plan, t."planStatus", t."planPrice", t."planDueDate",
        t.active, t."createdAt",
-       COUNT(u.id) FILTER (WHERE u.role = 'admin')::int AS admin_count,
+       MIN(u.email) FILTER (WHERE u.role = 'admin') AS admin_email,
+       MIN(u.id)    FILTER (WHERE u.role = 'admin') AS admin_id,
+       COUNT(u.id)  FILTER (WHERE u.role = 'admin')::int AS admin_count,
        COUNT(o.id)::int AS order_count
      FROM "Tenant" t
      LEFT JOIN "User" u ON u."tenantId" = t.id

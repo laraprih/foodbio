@@ -11,6 +11,7 @@ interface Tenant {
   address: string | null; city: string | null; state: string | null;
   plan: string; planStatus: string; planPrice: number; planDueDate: string | null;
   active: boolean; createdAt: string; admin_count: number; order_count: number;
+  admin_email: string | null; admin_id: string | null;
 }
 
 const STATUS_LABEL: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -67,7 +68,7 @@ function TenantModal({ tenant, onClose, onSaved }: ModalProps) {
     planStatus: tenant?.planStatus ?? 'trial',
     planPrice: String(tenant?.planPrice ?? 99),
     planDueDate: tenant?.planDueDate ? tenant.planDueDate.split('T')[0] : '',
-    adminEmail: '',
+    adminEmail: tenant?.admin_email ?? '',
     adminPassword: '',
   });
 
@@ -79,11 +80,13 @@ function TenantModal({ tenant, onClose, onSaved }: ModalProps) {
     setSaving(true);
     setError('');
     try {
-      const payload = {
+      const payload: any = {
         ...form,
         planPrice: parseFloat(form.planPrice) || 99,
         planDueDate: form.planDueDate || null,
       };
+      // Don't send empty password on edit — only send if the user typed something
+      if (isEdit && !payload.adminPassword) delete payload.adminPassword;
       const res = isEdit
         ? await fetch(`/api/superadmin/tenants/${tenant!.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         : await fetch('/api/superadmin/tenants', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -152,15 +155,13 @@ function TenantModal({ tenant, onClose, onSaved }: ModalProps) {
             </div>
           </section>
 
-          {!isEdit && (
-            <section>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Administrador da Loja</p>
-              <div className="space-y-3">
-                <Field label="E-mail do admin *" value={form.adminEmail} onChange={set('adminEmail')} type="email" placeholder="admin@empresa.com.br" required />
-                <Field label="Senha *" value={form.adminPassword} onChange={set('adminPassword')} type="password" placeholder="••••••••" required />
-              </div>
-            </section>
-          )}
+          <section>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Administrador da Loja</p>
+            <div className="space-y-3">
+              <Field label={isEdit ? 'E-mail do admin' : 'E-mail do admin *'} value={form.adminEmail} onChange={set('adminEmail')} type="email" placeholder="admin@empresa.com.br" required={!isEdit} />
+              <Field label={isEdit ? 'Nova senha (deixe em branco para manter)' : 'Senha *'} value={form.adminPassword} onChange={set('adminPassword')} type="password" placeholder="••••••••" required={!isEdit} />
+            </div>
+          </section>
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors">
@@ -410,6 +411,7 @@ export default function EmpresasPage() {
                     <div>
                       <p className="text-sm font-bold text-gray-900">{t.name}</p>
                       <p className="text-xs text-gray-400">/{t.slug}</p>
+                      {t.admin_email && <p className="text-xs text-gray-400">{t.admin_email}</p>}
                     </div>
                   </div>
                   {/* Plan */}
