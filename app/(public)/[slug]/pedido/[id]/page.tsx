@@ -204,7 +204,7 @@ export default function OrderStatusPage() {
               </div>
             </div>
 
-            <div className="bg-[var(--color-app-bg)] rounded-2xl p-5 border border-[var(--color-lime-primary)]/20">
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <h3 className="text-xs font-bold text-[var(--color-lime-primary)] uppercase tracking-wider mb-3">Itens do pedido</h3>
               <div className="space-y-2.5 mb-4">
                 {order.items.map((item: any, idx: number) => (
