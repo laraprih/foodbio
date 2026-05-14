@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+import { StoreImage } from '@/components/ui/StoreImage';
 import { X, Minus, Plus, ShoppingCart, ChefHat } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -102,13 +102,12 @@ export default function ProductModal({ product, slug, onClose, onAdd }: ProductM
         {/* Image */}
         <div className="relative w-full aspect-video rounded-t-3xl md:rounded-t-3xl overflow-hidden shrink-0 bg-gray-100">
           {product.imageUrl ? (
-            <Image
+            <StoreImage
               src={product.imageUrl}
               alt={product.name}
               fill
               className="object-cover"
               referrerPolicy="no-referrer"
-              priority
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">

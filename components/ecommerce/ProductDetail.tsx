@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
+import { StoreImage } from '@/components/ui/StoreImage';
 import Link from 'next/link';
 import { ArrowLeft, Heart, Star, Clock, Minus, Plus, ShieldCheck, ChefHat } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -71,13 +71,12 @@ export default function ProductDetail({ product, onAdd, loading, slug }: Product
             {/* Product image */}
             <div className="aspect-square lg:aspect-auto lg:h-full relative bg-gray-50 lg:min-h-[480px]">
               {product.imageUrl ? (
-                <Image
+                <StoreImage
                   src={product.imageUrl}
                   alt={product.name}
                   fill
                   className="object-cover"
                   referrerPolicy="no-referrer"
-                  priority
                 />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-3 min-h-[300px]">

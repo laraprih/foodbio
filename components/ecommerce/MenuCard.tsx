@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
+import { StoreImage } from '@/components/ui/StoreImage';
 import { Plus, ShoppingCart } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import Spinner from '@/components/ui/Spinner';
@@ -42,7 +42,7 @@ export default function MenuCard({
       >
         <div className="w-24 h-24 rounded-xl overflow-hidden bg-gray-50 relative shrink-0">
           {product.imageUrl ? (
-            <Image src={product.imageUrl} alt={product.name} fill className="object-cover" referrerPolicy="no-referrer" />
+            <StoreImage src={product.imageUrl} alt={product.name} fill className="object-cover" referrerPolicy="no-referrer" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <ShoppingCart className="w-8 h-8 text-gray-200" />
@@ -80,7 +80,7 @@ export default function MenuCard({
     >
       <div className="relative aspect-square bg-gray-50">
         {product.imageUrl ? (
-          <Image
+          <StoreImage
             src={product.imageUrl}
             alt={product.name}
             fill

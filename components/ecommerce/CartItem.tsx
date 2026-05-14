@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
+import { StoreImage } from '@/components/ui/StoreImage';
 import { Minus, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { CartItem as CartItemType } from '@/store/cart-store';
 import { formatCurrency } from '@/lib/utils';
@@ -19,7 +19,7 @@ export default function CartItem({ item, onRemove, onIncrement, onDecrement }: C
       {/* Image */}
       <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0 relative border border-gray-50">
         {item.imageUrl ? (
-          <Image src={item.imageUrl} alt={item.name} fill className="object-cover" referrerPolicy="no-referrer" />
+          <StoreImage src={item.imageUrl} alt={item.name} fill className="object-cover" referrerPolicy="no-referrer" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <ShoppingCart className="w-8 h-8 text-gray-200" />

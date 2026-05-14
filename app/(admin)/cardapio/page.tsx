@@ -25,17 +25,24 @@ const EMPTY_PRODUCT = { name: '', description: '', price: '', categoryId: '', im
 const EMPTY_CATEGORY = { name: '', order: 0 }
 
 // ── Image upload helper ───────────────────────────────────────────────────────
-async function uploadFile(file: File, token: string): Promise<string> {
+async function uploadFile(file: File): Promise<string> {
   const form = new FormData()
   form.append('file', file)
-  const res = await fetch('/bff/api/admin/upload', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: form,
-  })
-  if (!res.ok) throw new Error('Erro no upload')
+  const res = await fetch('/api/admin/upload', { method: 'POST', body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? 'Erro ao enviar imagem')
+  }
   const data = await res.json()
   return data.url
+}
+
+// Use <img> for data URLs (next/image doesn't support base64), <Image> for external
+function ProductImg({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  if (src.startsWith('data:')) {
+    return <img src={src} alt={alt} className={className} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+  }
+  return <Image src={src} alt={alt} fill className={className} referrerPolicy="no-referrer" />
 }
 
 // ── ImageInput ────────────────────────────────────────────────────────────────
@@ -47,14 +54,11 @@ function ImageInput({ value, onChange }: { value: string; onChange: (url: string
   const handleFile = async (file: File) => {
     setUploading(true)
     try {
-      const { getSession } = await import('next-auth/react')
-      const session = await getSession() as any
-      const token = session?.accessToken ?? ''
-      const url = await uploadFile(file, token)
+      const url = await uploadFile(file)
       onChange(url)
       toast.success('Imagem enviada!')
-    } catch {
-      toast.error('Erro ao enviar imagem')
+    } catch (err: any) {
+      toast.error(err.message ?? 'Erro ao enviar imagem')
     } finally {
       setUploading(false)
     }
@@ -116,8 +120,7 @@ function ImageInput({ value, onChange }: { value: string; onChange: (url: string
       {/* Preview */}
       {value && (
         <div className="mt-3 relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 group">
-          <Image src={value} alt="Preview" fill className="object-cover" referrerPolicy="no-referrer"
-            onError={() => {}} />
+          <ProductImg src={value} alt="Preview" className="object-cover" />
           <button type="button" onClick={() => onChange('')}
             className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <X className="w-4 h-4 text-white" />
@@ -395,7 +398,7 @@ export default function CardapioPage() {
                   {/* Image */}
                   <div className="w-14 h-14 rounded-xl bg-gray-100 overflow-hidden shrink-0 relative">
                     {product.imageUrl ? (
-                      <Image src={product.imageUrl} alt={product.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                      <ProductImg src={product.imageUrl} alt={product.name} className="object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ImageIcon className="w-5 h-5 text-gray-300" />
