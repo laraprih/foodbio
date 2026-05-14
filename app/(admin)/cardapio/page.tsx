@@ -147,7 +147,7 @@ export default function CardapioPage() {
 
   const { data: menuData, isLoading } = useQuery({
     queryKey: ['admin-menu'],
-    queryFn: () => get<{ categories: Category[] }>('/bff/api/admin/menu'),
+    queryFn: () => get<{ categories: Category[] }>('/api/admin/menu'),
   })
   const menu = isApiError(menuData) || !menuData ? null : menuData
   const categories = menu?.categories ?? []
@@ -156,38 +156,38 @@ export default function CardapioPage() {
 
   // ── Product mutations ────────────────────────────────────────────────────────
   const createProduct = useMutation({
-    mutationFn: (data: any) => post('/bff/api/admin/menu/products', data),
+    mutationFn: (data: any) => post('/api/admin/menu/products', data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-menu'] }); toast.success('Produto criado!'); resetProductForm() },
     onError: (e: any) => toast.error(e?.message ?? 'Erro ao criar produto'),
   })
   const updateProduct = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => patch(`/bff/api/admin/menu/products/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => patch(`/api/admin/menu/products/${id}`, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-menu'] }); toast.success('Produto atualizado!'); resetProductForm() },
     onError: () => toast.error('Erro ao atualizar produto'),
   })
   const deleteProduct = useMutation({
-    mutationFn: (id: string) => del(`/bff/api/admin/menu/products/${id}`),
+    mutationFn: (id: string) => del(`/api/admin/menu/products/${id}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-menu'] }); toast.success('Produto removido') },
     onError: () => toast.error('Erro ao remover produto'),
   })
   const toggleAvailability = useMutation({
-    mutationFn: (id: string) => patch(`/bff/api/admin/menu/products/${id}/availability`, {}),
+    mutationFn: (id: string) => patch(`/api/admin/menu/products/${id}/availability`, {}),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-menu'] }),
   })
 
   // ── Category mutations ───────────────────────────────────────────────────────
   const createCategory = useMutation({
-    mutationFn: (data: any) => post('/bff/api/admin/menu/categories', data),
+    mutationFn: (data: any) => post('/api/admin/menu/categories', data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-menu'] }); toast.success('Categoria criada!'); resetCategoryForm() },
     onError: () => toast.error('Erro ao criar categoria'),
   })
   const updateCategory = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => patch(`/bff/api/admin/menu/categories/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => patch(`/api/admin/menu/categories/${id}`, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-menu'] }); toast.success('Categoria atualizada!'); resetCategoryForm() },
     onError: () => toast.error('Erro ao atualizar categoria'),
   })
   const deleteCategory = useMutation({
-    mutationFn: (id: string) => del(`/bff/api/admin/menu/categories/${id}`),
+    mutationFn: (id: string) => del(`/api/admin/menu/categories/${id}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-menu'] }); toast.success('Categoria removida') },
     onError: (e: any) => toast.error(e?.message ?? 'Erro ao remover categoria'),
   })

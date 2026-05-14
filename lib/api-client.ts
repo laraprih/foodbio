@@ -19,13 +19,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T | 
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  // /bff/ paths go through Next.js rewrite → must use relative URL (same origin)
-  // Direct API paths use BASE_URL
-  const url = path.startsWith('http')
+  // /bff/ and /api/ paths are same-origin (relative); others use BASE_URL
+  const url = path.startsWith('http') || path.startsWith('/bff/') || path.startsWith('/api/')
     ? path
-    : path.startsWith('/bff/')
-      ? path
-      : `${BASE_URL}${path}`;
+    : `${BASE_URL}${path}`;
 
   try {
     const response = await fetch(url, { ...options, headers });
