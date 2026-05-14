@@ -1,12 +1,13 @@
 'use client'
 
-import React, { Suspense, use, useState } from 'react'
+import React, { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, UserPlus, Eye, EyeOff } from 'lucide-react'
 
-function CadastroForm({ slug }: { slug: string }) {
+export default function CadastroPage() {
+  const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' })
   const [showPass, setShowPass] = useState(false)
@@ -19,14 +20,9 @@ function CadastroForm({ slug }: { slug: string }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    if (form.password !== form.confirm) {
-      setError('As senhas não coincidem')
-      return
-    }
-    if (form.password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres')
-      return
-    }
+    if (form.password !== form.confirm) { setError('As senhas não coincidem'); return }
+    if (form.password.length < 6) { setError('A senha deve ter pelo menos 6 caracteres'); return }
+
     setLoading(true)
     try {
       const res = await fetch(`/api/store/${slug}/auth/register`, {
@@ -35,19 +31,11 @@ function CadastroForm({ slug }: { slug: string }) {
         body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone, password: form.password }),
       })
       const data = await res.json()
-      if (!res.ok) {
-        setError(data.error ?? 'Erro ao criar conta')
-        return
-      }
-      // Auto-login after registration
-      const login = await signIn('credentials', {
-        email: form.email,
-        password: form.password,
-        slug,
-        redirect: false,
-      })
+      if (!res.ok) { setError(data.error ?? 'Erro ao criar conta'); return }
+
+      // Auto-login
+      const login = await signIn('credentials', { email: form.email, password: form.password, slug, redirect: false })
       if (login?.error) {
-        // Account created but login failed — redirect to login page
         router.push(`/${slug}/login`)
       } else {
         router.push(`/${slug}`)
@@ -80,16 +68,16 @@ function CadastroForm({ slug }: { slug: string }) {
           </div>
 
           <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
 
             <Field label="Nome completo *" value={form.name} onChange={set('name')} placeholder="Seu nome" required />
             <Field label="E-mail *" type="email" value={form.email} onChange={set('email')} placeholder="seu@email.com" required />
             <Field label="Telefone / WhatsApp" type="tel" value={form.phone} onChange={set('phone')} placeholder="(00) 00000-0000" />
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1.5">Senha * <span className="text-gray-400 font-normal">(mín. 6 caracteres)</span></label>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                Senha * <span className="text-gray-400 font-normal">(mín. 6 caracteres)</span>
+              </label>
               <div className="relative">
                 <input
                   type={showPass ? 'text' : 'password'}
@@ -137,14 +125,5 @@ function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> 
         className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]/30 focus:border-[var(--color-lime-primary)] transition"
       />
     </div>
-  )
-}
-
-export default function CadastroPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
-      <CadastroForm slug={slug} />
-    </Suspense>
   )
 }

@@ -1,12 +1,13 @@
 'use client'
 
-import React, { Suspense, use, useState } from 'react'
+import React, { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, LogIn, Eye, EyeOff } from 'lucide-react'
 
-function LoginForm({ slug }: { slug: string }) {
+export default function CustomerLoginPage() {
+  const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPass, setShowPass] = useState(false)
@@ -111,14 +112,5 @@ function LoginForm({ slug }: { slug: string }) {
         </div>
       </div>
     </div>
-  )
-}
-
-export default function CustomerLoginPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
-      <LoginForm slug={slug} />
-    </Suspense>
   )
 }
