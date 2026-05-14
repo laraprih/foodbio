@@ -1,8 +1,6 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '@/lib/validations';
@@ -13,7 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Mail, Lock } from 'lucide-react';
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard';
@@ -43,6 +41,44 @@ export default function AdminLoginPage() {
   };
 
   return (
+    <div className="flex-1 px-6 py-10 lg:py-0 flex flex-col justify-center max-w-sm mx-auto w-full lg:max-w-md lg:px-12">
+      <div className="mb-8">
+        <h2 className="text-2xl font-black text-gray-900 mb-1.5">Acesso administrativo</h2>
+        <p className="text-gray-400 text-sm">Entre com suas credenciais de administrador</p>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <Input
+          label="E-mail"
+          type="email"
+          placeholder="admin@seurestaurante.com"
+          icon={<Mail className="w-4 h-4" />}
+          error={errors.email?.message as string}
+          {...register('email')}
+        />
+        <Input
+          label="Senha"
+          type="password"
+          placeholder="••••••••"
+          icon={<Lock className="w-4 h-4" />}
+          error={errors.password?.message as string}
+          {...register('password')}
+        />
+        <div className="flex justify-end">
+          <button type="button" className="text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors">
+            Esqueceu a senha?
+          </button>
+        </div>
+        <Button type="submit" variant="dark" size="xl" className="w-full mt-2" loading={isSubmitting}>
+          Entrar
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
     <div className="min-h-screen bg-white lg:bg-gray-50 flex flex-col lg:flex-row">
       {/* Desktop branding panel */}
       <div className="hidden lg:flex lg:w-5/12 xl:w-1/2 bg-[var(--color-lime-primary)] flex-col items-center justify-center p-16 relative overflow-hidden">
@@ -70,39 +106,9 @@ export default function AdminLoginPage() {
           <span className="font-black text-gray-900 text-lg">Foodin <span className="text-[var(--color-lime-primary)] text-sm">admin</span></span>
         </div>
 
-        <div className="flex-1 px-6 py-10 lg:py-0 flex flex-col justify-center max-w-sm mx-auto w-full lg:max-w-md lg:px-12">
-          <div className="mb-8">
-            <h2 className="text-2xl font-black text-gray-900 mb-1.5">Acesso administrativo</h2>
-            <p className="text-gray-400 text-sm">Entre com suas credenciais de administrador</p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input
-              label="E-mail"
-              type="email"
-              placeholder="admin@seurestaurante.com"
-              icon={<Mail className="w-4 h-4" />}
-              error={errors.email?.message as string}
-              {...register('email')}
-            />
-            <Input
-              label="Senha"
-              type="password"
-              placeholder="••••••••"
-              icon={<Lock className="w-4 h-4" />}
-              error={errors.password?.message as string}
-              {...register('password')}
-            />
-            <div className="flex justify-end">
-              <button type="button" className="text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors">
-                Esqueceu a senha?
-              </button>
-            </div>
-            <Button type="submit" variant="dark" size="xl" className="w-full mt-2" loading={isSubmitting}>
-              Entrar
-            </Button>
-          </form>
-        </div>
+        <Suspense fallback={<div className="flex-1" />}>
+          <AdminLoginForm />
+        </Suspense>
       </div>
     </div>
   );
