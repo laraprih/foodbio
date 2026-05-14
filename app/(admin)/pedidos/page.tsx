@@ -7,7 +7,9 @@ import { toast } from 'react-hot-toast'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { cn } from '@/lib/utils'
 import { useSocket } from '@/hooks/use-socket'
-import { Clock, CheckCircle, XCircle, Package, ChevronRight } from 'lucide-react'
+import { Clock, ChevronRight } from 'lucide-react'
+import OrderDetailModal from '@/components/admin/OrderDetailModal'
+import { formatCurrency } from '@/lib/utils'
 
 const STATUS_TABS = [
   { id: 'all', label: 'Todos' },
@@ -28,15 +30,18 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-600',
 }
 
-const NEXT_STATUS: Record<string, string> = {
-  pending: 'confirmed',
-  confirmed: 'preparing',
-  preparing: 'ready',
-  ready: 'delivered',
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pendente',
+  confirmed: 'Confirmado',
+  preparing: 'Preparando',
+  ready: 'Pronto',
+  delivered: 'Entregue',
+  cancelled: 'Cancelado',
 }
 
 export default function PedidosPage() {
   const [activeTab, setActiveTab] = useState('all')
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null)
   const queryClient = useQueryClient()
 
   const { data: orders = [], isLoading } = useQuery({
@@ -45,7 +50,6 @@ export default function PedidosPage() {
     refetchInterval: 15000,
   })
 
-  // Live updates via Socket
   useSocket('admin', {
     new_order: () => queryClient.invalidateQueries({ queryKey: ['admin-orders-full'] }),
   })
@@ -66,15 +70,28 @@ export default function PedidosPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-orders-full'] })
       toast.success('Pedido cancelado')
     },
+    onError: () => toast.error('Erro ao cancelar pedido'),
+  })
+
+  const refundOrder = useMutation({
+    mutationFn: (id: string) =>
+      fetch(`/api/admin/orders/${id}/refund`, { method: 'POST' }).then(async (r) => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data.error ?? 'Erro ao processar estorno')
+        return data
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders-full'] })
+      toast.success('Estorno processado com sucesso')
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Erro ao processar estorno'),
   })
 
   const ordersArr = isApiError(orders) || !Array.isArray(orders) ? [] : orders
   const filtered = activeTab === 'all' ? ordersArr : ordersArr.filter((o: any) => o.status === activeTab)
 
-  const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-
   return (
-    <div className="p-8">
+    <div className="p-6 lg:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">Pedidos</h1>
@@ -123,10 +140,7 @@ export default function PedidosPage() {
                   <Skeleton className="h-3.5 w-10" />
                 </div>
               </div>
-              <div className="flex gap-2 shrink-0">
-                <Skeleton className="h-9 w-24 rounded-2xl" />
-                <Skeleton className="h-9 w-9 rounded-xl" />
-              </div>
+              <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
             </div>
           ))}
         </div>
@@ -137,54 +151,67 @@ export default function PedidosPage() {
       ) : (
         <div className="space-y-3">
           {filtered.map((order: any) => (
-            <div
+            <button
               key={order.id}
-              className="bg-white rounded-[28px] border border-black/5 shadow-sm p-6 flex items-start gap-4"
+              onClick={() => setSelectedOrder(order)}
+              className="w-full text-left bg-white rounded-[28px] border border-black/5 shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-gray-200 transition-all active:scale-[0.99]"
             >
+              {/* Status dot */}
+              <div className={cn(
+                'w-2.5 h-2.5 rounded-full shrink-0',
+                order.status === 'pending' ? 'bg-gray-400 animate-pulse' :
+                order.status === 'confirmed' ? 'bg-blue-500' :
+                order.status === 'preparing' ? 'bg-yellow-500 animate-pulse' :
+                order.status === 'ready' ? 'bg-orange-500' :
+                order.status === 'delivered' ? 'bg-green-500' :
+                'bg-red-400'
+              )} />
+
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="font-black text-gray-900">#{order.id.slice(-6)}</span>
-                  <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full capitalize', STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-600')}>
-                    {order.status}
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className="font-black text-gray-900 text-sm">
+                    #{order.id.slice(-8).toUpperCase()}
                   </span>
-                  {order.type && (
-                    <span className="text-xs text-gray-400 font-medium capitalize">{order.type}</span>
+                  <span className={cn(
+                    'text-xs font-bold px-2 py-0.5 rounded-full',
+                    STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-600'
+                  )}>
+                    {STATUS_LABELS[order.status] ?? order.status}
+                  </span>
+                  {order.customerName && (
+                    <span className="text-xs text-gray-400 truncate max-w-[120px]">
+                      {order.customerName}
+                    </span>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-                  <span className="font-bold text-gray-900">{fmt(order.total)}</span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
+                  <span className="font-bold text-gray-900">{formatCurrency(order.total)}</span>
+                  <span className="flex items-center gap-1 text-xs">
+                    <Clock className="w-3 h-3" />
                     {new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
-                  <span>{order.items?.length ?? 0} itens</span>
+                  <span className="text-xs">{order.items?.length ?? 0} itens</span>
+                  <span className="text-xs capitalize text-gray-400">{order.type}</span>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0">
-                {order.status !== 'delivered' && order.status !== 'cancelled' && NEXT_STATUS[order.status] && (
-                  <button
-                    onClick={() => updateStatus.mutate({ id: order.id, status: NEXT_STATUS[order.status] })}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[var(--color-lime-primary)] text-white font-bold text-xs hover:brightness-90 transition-all"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                    Avançar
-                  </button>
-                )}
-                {order.status !== 'cancelled' && order.status !== 'delivered' && (
-                  <button
-                    onClick={() => cancelOrder.mutate(order.id)}
-                    className="w-9 h-9 rounded-xl border border-red-200 flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors"
-                  >
-                    <XCircle className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
+              <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+            </button>
           ))}
         </div>
       )}
+
+      <OrderDetailModal
+        order={selectedOrder}
+        open={!!selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onAdvance={(id, status) => updateStatus.mutate({ id, status })}
+        onCancel={(id) => cancelOrder.mutate(id)}
+        onRefund={(id) => refundOrder.mutate(id)}
+        isAdvancing={updateStatus.isPending}
+        isCancelling={cancelOrder.isPending}
+        isRefunding={refundOrder.isPending}
+      />
     </div>
   )
 }

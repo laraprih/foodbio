@@ -20,7 +20,7 @@ export async function GET() {
   const { rows: orders } = await pool.query(
     `SELECT o.id, o.status, o.type, o.total, o.subtotal, o."deliveryFee",
             o."paymentStatus", o."paymentMethod", o."customerName", o."customerPhone",
-            o."deliveryAddress", o."createdAt", o."updatedAt"
+            o."deliveryAddress", o."externalReference", o."createdAt", o."updatedAt"
      FROM "Order" o
      WHERE o."tenantId" = $1
      ORDER BY o."createdAt" DESC
@@ -65,6 +65,7 @@ export async function GET() {
       customerName: o.customerName,
       customerPhone: o.customerPhone,
       address: o.deliveryAddress,
+      externalReference: o.externalReference,
       createdAt: o.createdAt,
       updatedAt: o.updatedAt,
       items: itemsByOrder[o.id] ?? [],
