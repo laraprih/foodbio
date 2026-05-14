@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { get, patch, isApiError } from '@/lib/api-client'
 import { toast } from 'react-hot-toast'
-import { Upload, X, Loader2, CheckCircle, Store, Image as ImageIcon } from 'lucide-react'
+import { Upload, X, Loader2, CheckCircle, Store, Image as ImageIcon, CreditCard, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { cn } from '@/lib/utils'
@@ -16,16 +16,13 @@ interface Tenant {
   address?: string; city?: string; state?: string
   logoUrl?: string; logoFormat: string; coverUrl?: string
   deliveryFee: number; minOrderValue: number; deliveryRadius: number
+  gateway?: string | null; mpAccessToken?: string | null
 }
 
-async function uploadBlob(blob: Blob, filename: string, token: string): Promise<string> {
+async function uploadImage(blob: Blob, filename: string): Promise<string> {
   const form = new FormData()
   form.append('file', blob, filename)
-  const res = await fetch('/bff/api/admin/upload', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: form,
-  })
+  const res = await fetch('/api/admin/upload', { method: 'POST', body: form })
   if (!res.ok) throw new Error('Erro no upload')
   return (await res.json()).url
 }
@@ -42,7 +39,6 @@ function ImageUploader({
   const openEditor = (file: File) => {
     if (!file.type.startsWith('image/')) return
     setPendingFile(file)
-    // reset input so same file can be selected again
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -50,9 +46,7 @@ function ImageUploader({
     setPendingFile(null)
     setUploading(true)
     try {
-      const { getSession } = await import('next-auth/react')
-      const session = await getSession() as any
-      const url = await uploadBlob(blob, filename, session?.accessToken ?? '')
+      const url = await uploadImage(blob, filename)
       onChange(url)
       toast.success('Imagem salva!')
     } catch {
@@ -62,27 +56,19 @@ function ImageUploader({
     }
   }
 
-  const previewClass = aspect === 'wide'
-    ? 'w-full h-32 rounded-2xl'
-    : 'w-24 h-24 rounded-2xl'
+  const previewClass = aspect === 'wide' ? 'w-full h-32 rounded-2xl' : 'w-24 h-24 rounded-2xl'
 
   return (
     <div>
       {pendingFile && (
-        <ImageEditorModal
-          file={pendingFile}
-          onConfirm={handleEditorConfirm}
-          onClose={() => setPendingFile(null)}
-        />
+        <ImageEditorModal file={pendingFile} onConfirm={handleEditorConfirm} onClose={() => setPendingFile(null)} />
       )}
-
       <label className="block text-sm font-bold text-gray-700 mb-2">{label}</label>
       <div className={cn('flex gap-4 flex-wrap', aspect === 'wide' ? 'flex-col' : 'items-start')}>
-        {/* Preview */}
         <div className={cn('relative bg-gray-100 overflow-hidden border border-gray-200 group shrink-0', previewClass)}>
           {value ? (
             <>
-              <Image src={value} alt={label} fill className="object-cover" referrerPolicy="no-referrer" />
+              <Image src={value} alt={label} fill className="object-cover" referrerPolicy="no-referrer" unoptimized={value.startsWith('data:')} />
               <button type="button" onClick={() => onChange('')}
                 className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <X className="w-5 h-5 text-white" />
@@ -94,8 +80,6 @@ function ImageUploader({
             </div>
           )}
         </div>
-
-        {/* Controls */}
         <div className={cn('flex flex-col gap-2 min-w-0', aspect !== 'wide' && 'flex-1')}>
           <div
             onClick={() => inputRef.current?.click()}
@@ -120,20 +104,15 @@ function ImageUploader({
   )
 }
 
-// ── Logo format preview cards ────────────────────────────────────────────────
-function LogoFormatPicker({ value, onChange, logoUrl }: {
-  value: string; onChange: (v: string) => void; logoUrl: string
-}) {
+function LogoFormatPicker({ value, onChange, logoUrl }: { value: string; onChange: (v: string) => void; logoUrl: string }) {
   const formats = [
     {
-      id: 'square',
-      label: 'Quadrado',
-      description: 'Ícone compacto — ideal para logos com símbolo',
+      id: 'square', label: 'Quadrado', description: 'Ícone compacto — ideal para logos com símbolo',
       preview: (
         <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-3 py-2 w-fit">
           <div className="w-10 h-10 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0 relative">
             {logoUrl
-              ? <Image src={logoUrl} alt="preview" fill className="object-cover" referrerPolicy="no-referrer" />
+              ? <Image src={logoUrl} alt="preview" fill className="object-cover" referrerPolicy="no-referrer" unoptimized={logoUrl.startsWith('data:')} />
               : <div className="w-full h-full bg-[var(--color-lime-primary)] rounded-xl flex items-center justify-center"><span className="text-white font-black text-sm">F</span></div>}
           </div>
           <div className="w-20 h-2.5 bg-gray-200 rounded-full" />
@@ -141,14 +120,12 @@ function LogoFormatPicker({ value, onChange, logoUrl }: {
       ),
     },
     {
-      id: 'wide',
-      label: 'Horizontal',
-      description: 'Logotipo completo — ideal para logos com texto',
+      id: 'wide', label: 'Horizontal', description: 'Logotipo completo — ideal para logos com texto',
       preview: (
         <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-3 py-2 w-fit">
           <div className="h-10 w-28 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0 relative">
             {logoUrl
-              ? <Image src={logoUrl} alt="preview" fill className="object-contain p-1" referrerPolicy="no-referrer" />
+              ? <Image src={logoUrl} alt="preview" fill className="object-contain p-1" referrerPolicy="no-referrer" unoptimized={logoUrl.startsWith('data:')} />
               : <div className="w-full h-full bg-[var(--color-lime-primary)] rounded-xl flex items-center justify-center"><span className="text-white font-black text-sm">Logo</span></div>}
           </div>
         </div>
@@ -161,22 +138,12 @@ function LogoFormatPicker({ value, onChange, logoUrl }: {
       <label className="block text-sm font-bold text-gray-700 mb-3">Formato da logo na navbar</label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {formats.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => onChange(f.id)}
-            className={cn(
-              'flex flex-col gap-3 p-4 rounded-2xl border-2 text-left transition-all',
-              value === f.id
-                ? 'border-[var(--color-lime-primary)] bg-[var(--color-app-bg)]'
-                : 'border-gray-200 hover:border-gray-300 bg-white'
-            )}
-          >
+          <button key={f.id} type="button" onClick={() => onChange(f.id)}
+            className={cn('flex flex-col gap-3 p-4 rounded-2xl border-2 text-left transition-all',
+              value === f.id ? 'border-[var(--color-lime-primary)] bg-[var(--color-app-bg)]' : 'border-gray-200 hover:border-gray-300 bg-white')}>
             {f.preview}
             <div>
-              <p className={cn('text-sm font-bold', value === f.id ? 'text-[var(--color-lime-primary)]' : 'text-gray-700')}>
-                {f.label}
-              </p>
+              <p className={cn('text-sm font-bold', value === f.id ? 'text-[var(--color-lime-primary)]' : 'text-gray-700')}>{f.label}</p>
               <p className="text-xs text-gray-400 mt-0.5">{f.description}</p>
             </div>
           </button>
@@ -186,13 +153,13 @@ function LogoFormatPicker({ value, onChange, logoUrl }: {
   )
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
 export default function ConfiguracoesPage() {
   const queryClient = useQueryClient()
+  const [showToken, setShowToken] = useState(false)
 
   const { data: tenantData, isLoading } = useQuery({
     queryKey: ['admin-tenant'],
-    queryFn: () => get<Tenant>('/bff/api/admin/tenant'),
+    queryFn: () => get<Tenant>('/api/admin/tenant'),
   })
   const tenant = isApiError(tenantData) || !tenantData ? null : tenantData
 
@@ -200,6 +167,7 @@ export default function ConfiguracoesPage() {
     name: '', phone: '', address: '', city: '', state: '',
     logoUrl: '', logoFormat: 'square', coverUrl: '',
     deliveryFee: '', minOrderValue: '', deliveryRadius: '',
+    mpAccessToken: '',
   })
 
   useEffect(() => {
@@ -216,12 +184,13 @@ export default function ConfiguracoesPage() {
         deliveryFee: String(tenant.deliveryFee ?? 0),
         minOrderValue: String(tenant.minOrderValue ?? 0),
         deliveryRadius: String(tenant.deliveryRadius ?? 5),
+        mpAccessToken: tenant.mpAccessToken ?? '',
       })
     }
   }, [tenant])
 
   const update = useMutation({
-    mutationFn: () => patch('/bff/api/admin/tenant', {
+    mutationFn: () => patch('/api/admin/tenant', {
       name: form.name,
       phone: form.phone || null,
       address: form.address || null,
@@ -233,6 +202,7 @@ export default function ConfiguracoesPage() {
       deliveryFee: Number(form.deliveryFee),
       minOrderValue: Number(form.minOrderValue),
       deliveryRadius: Number(form.deliveryRadius),
+      mpAccessToken: form.mpAccessToken || '',
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-tenant'] })
@@ -241,8 +211,7 @@ export default function ConfiguracoesPage() {
     onError: () => toast.error('Erro ao salvar'),
   })
 
-  const set = (key: keyof typeof form) => (val: string) =>
-    setForm((f) => ({ ...f, [key]: val }))
+  const set = (key: keyof typeof form) => (val: string) => setForm((f) => ({ ...f, [key]: val }))
 
   const field = (label: string, key: keyof typeof form, opts?: { placeholder?: string; type?: string }) => (
     <div>
@@ -265,44 +234,9 @@ export default function ConfiguracoesPage() {
         <Skeleton className="w-10 h-10 rounded-2xl" />
         <div className="space-y-2"><Skeleton className="h-6 w-40" /><Skeleton className="h-3.5 w-56" /></div>
       </div>
-      {/* Visual identity card */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6">
-        <Skeleton className="h-5 w-36" />
-        <div className="flex items-start gap-4">
-          <Skeleton className="w-24 h-24 rounded-2xl shrink-0" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-10 w-36 rounded-xl" />
-            <Skeleton className="h-10 w-full rounded-xl" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Skeleton className="h-28 rounded-2xl" />
-          <Skeleton className="h-28 rounded-2xl" />
-        </div>
-        <Skeleton className="w-full h-32 rounded-2xl" />
-      </div>
-      {/* Store info card */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-        <Skeleton className="h-5 w-44" />
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="space-y-1.5">
-            <Skeleton className="h-3.5 w-24" />
-            <Skeleton className="h-10 w-full rounded-xl" />
-          </div>
-        ))}
-      </div>
-      {/* Delivery card */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-        <Skeleton className="h-5 w-52" />
-        <div className="grid grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="space-y-1.5">
-              <Skeleton className="h-3.5 w-full" />
-              <Skeleton className="h-10 w-full rounded-xl" />
-            </div>
-          ))}
-        </div>
-      </div>
+      {[120, 80, 60, 80].map((h, i) => (
+        <Skeleton key={i} className={`h-${h < 100 ? '['+h+'px]' : '['+h+'px]'} w-full rounded-2xl`} style={{ height: h }} />
+      ))}
     </div>
   )
 
@@ -323,26 +257,9 @@ export default function ConfiguracoesPage() {
         {/* Identidade visual */}
         <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
           <h2 className="font-black text-gray-900">Identidade visual</h2>
-
-          <ImageUploader
-            label="Logo da loja"
-            value={form.logoUrl}
-            onChange={set('logoUrl')}
-            aspect="square"
-          />
-
-          <LogoFormatPicker
-            value={form.logoFormat}
-            onChange={set('logoFormat')}
-            logoUrl={form.logoUrl}
-          />
-
-          <ImageUploader
-            label="Imagem de capa"
-            value={form.coverUrl}
-            onChange={set('coverUrl')}
-            aspect="wide"
-          />
+          <ImageUploader label="Logo da loja" value={form.logoUrl} onChange={set('logoUrl')} aspect="square" />
+          <LogoFormatPicker value={form.logoFormat} onChange={set('logoFormat')} logoUrl={form.logoUrl} />
+          <ImageUploader label="Imagem de capa" value={form.coverUrl} onChange={set('coverUrl')} aspect="wide" />
         </section>
 
         {/* Informações básicas */}
@@ -364,6 +281,43 @@ export default function ConfiguracoesPage() {
             {field('Taxa de entrega (R$)', 'deliveryFee', { type: 'number', placeholder: '0,00' })}
             {field('Pedido mínimo (R$)', 'minOrderValue', { type: 'number', placeholder: '0,00' })}
             {field('Raio (km)', 'deliveryRadius', { type: 'number', placeholder: '5' })}
+          </div>
+        </section>
+
+        {/* Pagamento PIX */}
+        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-[var(--color-lime-primary)]" />
+            <h2 className="font-black text-gray-900">Pagamento — Mercado Pago</h2>
+          </div>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Cole aqui o <strong>Access Token</strong> da sua conta Mercado Pago para habilitar pagamentos PIX e cartão.
+            Encontre em: <span className="font-mono bg-gray-100 px-1 rounded">mercadopago.com.br → Seu negócio → Configurações → Credenciais</span>
+          </p>
+
+          {tenant?.gateway === 'mercadopago' && (
+            <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+              <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+              Mercado Pago conectado — pagamentos PIX ativos
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1.5">Access Token</label>
+            <div className="relative">
+              <input
+                type={showToken ? 'text' : 'password'}
+                value={form.mpAccessToken}
+                onChange={(e) => set('mpAccessToken')(e.target.value)}
+                placeholder="APP_USR-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)] bg-white font-mono"
+              />
+              <button type="button" onClick={() => setShowToken(p => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Deixe em branco para desconectar.</p>
           </div>
         </section>
 
