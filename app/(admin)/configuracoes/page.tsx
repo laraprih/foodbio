@@ -290,10 +290,30 @@ export default function ConfiguracoesPage() {
             <CreditCard className="w-5 h-5 text-[var(--color-lime-primary)]" />
             <h2 className="font-black text-gray-900">Pagamento — Mercado Pago</h2>
           </div>
-          <p className="text-xs text-gray-400 leading-relaxed">
-            Cole aqui o <strong>Access Token</strong> da sua conta Mercado Pago para habilitar pagamentos PIX e cartão.
-            Encontre em: <span className="font-mono bg-gray-100 px-1 rounded">mercadopago.com.br → Seu negócio → Configurações → Credenciais</span>
-          </p>
+
+          {/* Instruções visuais */}
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-2 text-xs text-blue-800">
+            <p className="font-bold">Como encontrar o Access Token:</p>
+            <ol className="space-y-1 list-decimal list-inside text-blue-700">
+              <li>Acesse <span className="font-mono bg-white px-1 rounded">mercadopago.com.br/developers/panel/app</span></li>
+              <li>Clique em <strong>Suas integrações</strong> → selecione sua aplicação</li>
+              <li>No menu lateral: <strong>Produção → Credenciais de produção</strong></li>
+              <li>Copie o campo <strong>Access Token</strong> (começa com <span className="font-mono">APP_USR-</span> seguido de números e letras — é mais longo que a Public Key)</li>
+            </ol>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="bg-red-50 border border-red-100 rounded-xl p-3">
+              <p className="font-bold text-red-700 mb-1">❌ NÃO usar (Public Key)</p>
+              <p className="font-mono text-red-500 break-all">APP_USR-0b29aa65-be9a-46d9-8e0e-8b25d572347e</p>
+              <p className="text-red-400 mt-1">Formato curto · UUID · usado no frontend</p>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
+              <p className="font-bold text-emerald-700 mb-1">✓ Usar (Access Token)</p>
+              <p className="font-mono text-emerald-600 break-all">APP_USR-1234567-050525-abc...xyz-123456</p>
+              <p className="text-emerald-500 mt-1">Formato longo · com data e ID · servidor</p>
+            </div>
+          </div>
 
           {tenant?.gateway === 'mercadopago' && (
             <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
@@ -303,13 +323,15 @@ export default function ConfiguracoesPage() {
           )}
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1.5">Access Token</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+              Access Token (privado — nunca compartilhe)
+            </label>
             <div className="relative">
               <input
                 type={showToken ? 'text' : 'password'}
                 value={form.mpAccessToken}
                 onChange={(e) => set('mpAccessToken')(e.target.value)}
-                placeholder="APP_USR-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                placeholder="APP_USR-1234567890123456-050525-..."
                 className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)] bg-white font-mono"
               />
               <button type="button" onClick={() => setShowToken(p => !p)}
