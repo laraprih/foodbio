@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Tenant {
+  id             String   @id @default(uuid())
+  slug           String   @unique
+  name           String
+  phone          String?
+  address        String?
+  city           String?
+  state          String?
+  coords         Json?
+  logoUrl        String?
+  coverUrl       String?
+  openingHours   Json?
+  deliveryRadius Float    @default(5.0)
+  deliveryFee    Float    @default(0.0)
+  minOrderValue  Float    @default(0.0)
+  plan           String   @default("free")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  paymentAccount TenantPaymentAccount?
+  users          User[]
+  products       Product[]
+  categories     Category[]
+  orders         Order[]
+
+  @@index([slug])
+  @@index([city, state, active])
+}
+
+model TenantPaymentAccount {
+  id                String    @id @default(uuid())
+  tenantId          String    @unique
+  gateway           String    // "mercadopago" | "pagbank"
+  externalAccountId String
+  accessToken       String    // AES-256-GCM encrypted
+  refreshToken      String?
+  tokenExpiresAt    DateTime?
+  onboardingStatus  String    @default("pending") // pending | active | suspended
+  commissionPercent Float     @default(8.0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String?
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String?
+  role         String   @default("customer") // admin | attendant | cook | driver | customer
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  tenant   Tenant?   @relation(fields: [tenantId], references: [id])
+  customer Customer?
+  driver   Driver?
+
+  @@index([email])
+  @@index([tenantId, role])
+}
+
+model Customer {
+  id        String  @id @default(uuid())
+  userId    String  @unique
+  addresses Json    @default("[]")
+  user      User    @relation(fields: [userId], references: [id])
+  orders    Order[]
+}
+
+model Driver {
+  id         String     @id @default(uuid())
+  userId     String     @unique
+  tenantId   String
+  vehicle    String
+  plate      String
+  active     Boolean    @default(true)
+  user       User       @relation(fields: [userId], references: [id])
+  deliveries Delivery[]
+
+  @@index([tenantId, active])
+}
+
+model Category {
+  id       String    @id @default(uuid())
+  tenantId String
+  name     String
+  order    Int       @default(0)
+  active   Boolean   @default(true)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  products Product[]
+
+  @@index([tenantId, active])
+}
+
+model Product {
+  id          String         @id @default(uuid())
+  categoryId  String
+  tenantId    String
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  available   Boolean        @default(true)
+  sortOrder   Int            @default(0)
+  category    Category       @relation(fields: [categoryId], references: [id])
+  tenant      Tenant         @relation(fields: [tenantId], references: [id])
+  optionGroups OptionGroup[]
+  orderItems  OrderItem[]
+
+  @@index([tenantId, available])
+  @@index([categoryId])
+}
+
+model OptionGroup {
+  id         String   @id @default(uuid())
+  productId  String
+  name       String
+  required   Boolean  @default(false)
+  maxChoices Int      @default(1)
+  minChoices Int      @default(0)
+  options    Option[]
+
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Option {
+  id            String            @id @default(uuid())
+  groupId       String
+  name          String
+  priceModifier Float             @default(0)
+  available     Boolean           @default(true)
+  selectedIn    OrderItemOption[]
+
+  group OptionGroup @relation(fields: [groupId], references: [id])
+}
+
+model Order {
+  id                String    @id @default(uuid())
+  tenantId          String
+  customerId        String?
+  type              String    @default("delivery") // delivery | pickup | in_store
+  status            String    @default("pending")
+  // pending | confirmed | preparing | ready | dispatched | delivered | cancelled
+  total             Float
+  subtotal          Float     @default(0)
+  deliveryFee       Float     @default(0)
+  discount          Float     @default(0)
+  paymentStatus     String    @default("pending")
+  // pending | approved | failed | refunded | chargeback
+  paymentMethod     String?   // pix | credit_card | debit_card | cash
+  externalReference String?
+  deliveryAddress   Json?
+  customerName      String?
+  customerPhone     String?
+  notes             String?
+  cancelReason      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant             Tenant              @relation(fields: [tenantId], references: [id])
+  customer           Customer?           @relation(fields: [customerId], references: [id])
+  items              OrderItem[]
+  delivery           Delivery?
+  paymentTransaction PaymentTransaction?
+
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, paymentStatus])
+  @@index([externalReference])
+}
+
+model OrderItem {
+  id         String            @id @default(uuid())
+  orderId    String
+  productId  String
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+  notes      String?
+  options    OrderItemOption[]
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+}
+
+model OrderItemOption {
+  id          String @id @default(uuid())
+  orderItemId String
+  optionId    String
+  name        String
+  price       Float
+
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  option    Option    @relation(fields: [optionId], references: [id])
+}
+
+model Delivery {
+  id           String    @id @default(uuid())
+  orderId      String    @unique
+  driverId     String?
+  pickupTime   DateTime?
+  deliveryTime DateTime?
+  estimatedMin Int?
+  status       String    @default("waiting")
+  // waiting | assigned | picked_up | delivered
+
+  order  Order   @relation(fields: [orderId], references: [id])
+  driver Driver? @relation(fields: [driverId], references: [id])
+
+  @@index([driverId, status])
+}
+
+model PaymentTransaction {
+  id                   String    @id @default(uuid())
+  orderId              String    @unique
+  tenantId             String
+  gateway              String    // mercadopago | pagbank
+  gatewayTransactionId String?
+  totalAmount          Float
+  marketplaceFee       Float
+  sellerAmount         Float
+  gatewayFee           Float     @default(0)
+  splitStatus          String    @default("pending")
+  // pending | done | failed | refunded | chargeback
+  payloadRequest       Json?
+  payloadResponse      Json?
+  processedAt          DateTime?
+  createdAt            DateTime  @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([gatewayTransactionId])
+  @@index([splitStatus])
+}

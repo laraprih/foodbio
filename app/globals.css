@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-lime-primary: #D4FF00;
+  --color-app-bg: #F1F9E8;
+  --color-app-accent: #bef264;
+  --color-app-dark: #1a1a1a;
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
