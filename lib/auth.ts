@@ -38,7 +38,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             const valid = await argon2.verify(user.passwordHash, credentials.password as string)
             if (!valid) return null
 
-            return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, tenantId: user.tenantId, accessToken: null }
+            return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, tenantId: user.tenantId, accessToken: undefined }
           }
 
           // Admin / superadmin login: global email lookup
@@ -53,7 +53,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const valid = await argon2.verify(user.passwordHash, credentials.password as string)
           if (!valid) return null
 
-          return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, tenantId: user.tenantId, accessToken: null }
+          return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, tenantId: user.tenantId, accessToken: undefined }
         } catch {
           if (credentials.slug) return null // never fall back to Fastify for customer login
           const res = await fetch(`${API_URL}/api/auth/login`, {
