@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Minus, Plus, Trash2, Check } from 'lucide-react';
 import { CartItem as CartItemType } from '@/store/cart-store';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 interface CartItemProps {
   item: CartItemType;
@@ -54,7 +54,7 @@ export default function CartItem({
               key={opt.optionId}
               className="text-[9px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full font-medium"
             >
-              {opt.name} (+R$ {opt.price.toFixed(2)})
+              {opt.name} (+{formatCurrency(opt.price)})
             </span>
           ))}
           {item.selectedOptions.length === 0 && (
@@ -64,7 +64,7 @@ export default function CartItem({
 
         <div className="flex justify-between items-center">
           <span className="text-[15px] font-extrabold text-gray-900">
-            R$ {item.itemTotal.toFixed(2)}
+            {formatCurrency(item.itemTotal)}
           </span>
           
           <div className="flex items-center gap-3.5 bg-gray-50/80 border border-gray-100 rounded-full px-2.5 py-1.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">

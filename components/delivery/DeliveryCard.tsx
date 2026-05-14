@@ -2,31 +2,9 @@
 
 import React from 'react'
 import { MapPin, Phone, Clock, Navigation, CheckCircle, Package } from 'lucide-react'
-import { cn } from '@/lib/utils'
-
-interface DeliveryItem {
-  quantity: number
-  product: { name: string }
-}
-
-interface Delivery {
-  id: string
-  status: 'assigned' | 'picked_up' | 'on_the_way' | 'delivered'
-  order: {
-    id: string
-    total: number
-    items: DeliveryItem[]
-    customer?: { name: string; phone: string }
-    address?: {
-      street: string
-      number: string
-      neighborhood: string
-      city: string
-    }
-  }
-  estimatedMinutes?: number
-  createdAt: string
-}
+import { cn, formatCurrency, getElapsedMinutes, formatAddress } from '@/lib/utils'
+import { TIMING, DeliveryStatus } from '@/lib/constants'
+import type { Delivery } from '@/types'
 
 interface DeliveryCardProps {
   delivery: Delivery
@@ -34,31 +12,33 @@ interface DeliveryCardProps {
   onDeliver?: (id: string) => void
 }
 
-const STATUS_CONFIG = {
-  assigned: { label: 'Aguardando Coleta', color: 'bg-yellow-100 text-yellow-700', action: 'Confirmar Coleta' },
-  picked_up: { label: 'Coletado', color: 'bg-blue-100 text-blue-700', action: 'Marcar Entregue' },
-  on_the_way: { label: 'A Caminho', color: 'bg-purple-100 text-purple-700', action: 'Marcar Entregue' },
-  delivered: { label: 'Entregue', color: 'bg-green-100 text-green-700', action: '' },
+const STATUS_CONFIG: Record<DeliveryStatus, { label: string; color: string }> = {
+  [DeliveryStatus.ASSIGNED]: { label: 'Aguardando Coleta', color: 'bg-yellow-100 text-yellow-700' },
+  [DeliveryStatus.PICKED_UP]: { label: 'Coletado', color: 'bg-blue-100 text-blue-700' },
+  [DeliveryStatus.ON_THE_WAY]: { label: 'A Caminho', color: 'bg-purple-100 text-purple-700' },
+  [DeliveryStatus.DELIVERED]: { label: 'Entregue', color: 'bg-green-100 text-green-700' },
 }
 
 export default function DeliveryCard({ delivery, onPickUp, onDeliver }: DeliveryCardProps) {
   const { order, status } = delivery
   const config = STATUS_CONFIG[status]
-  const elapsed = Math.floor((Date.now() - new Date(delivery.createdAt).getTime()) / 60000)
-  const isLate = elapsed > 30
+  const elapsed = getElapsedMinutes(delivery.createdAt)
+  const isLate = elapsed > TIMING.DELIVERY_LATE_MINUTES
 
   const addressStr = order.address
-    ? `${order.address.street}, ${order.address.number} — ${order.address.neighborhood}`
+    ? formatAddress(order.address)
     : 'Retirada no local'
 
   const mapsUrl = order.address
-    ? `https://maps.google.com/?q=${encodeURIComponent(`${order.address.street} ${order.address.number} ${order.address.city}`)}`
+    ? `https://maps.google.com/?q=${encodeURIComponent(
+        `${order.address.street} ${order.address.number} ${order.address.city}`
+      )}`
     : null
 
   return (
     <div className={cn(
       'bg-white rounded-[28px] border p-6 flex flex-col gap-4 shadow-sm',
-      isLate && status !== 'delivered' ? 'border-red-200' : 'border-black/5'
+      isLate && status !== DeliveryStatus.DELIVERED ? 'border-red-200' : 'border-black/5'
     )}>
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -74,7 +54,7 @@ export default function DeliveryCard({ delivery, onPickUp, onDeliver }: Delivery
         </div>
       </div>
 
-      {/* Items summary */}
+      {/* Items */}
       <div className="space-y-1">
         {order.items.slice(0, 3).map((item, idx) => (
           <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
@@ -129,15 +109,13 @@ export default function DeliveryCard({ delivery, onPickUp, onDeliver }: Delivery
       {/* Total */}
       <div className="flex items-center justify-between text-sm">
         <span className="text-gray-400 font-medium">Total do pedido</span>
-        <span className="font-black text-gray-900">
-          {order.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-        </span>
+        <span className="font-black text-gray-900">{formatCurrency(order.total)}</span>
       </div>
 
       {/* Actions */}
-      {status !== 'delivered' && (
+      {status !== DeliveryStatus.DELIVERED && (
         <div className="grid grid-cols-1 gap-3 pt-2 border-t border-gray-100">
-          {status === 'assigned' && onPickUp && (
+          {status === DeliveryStatus.ASSIGNED && onPickUp && (
             <button
               onClick={() => onPickUp(delivery.id)}
               className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-zinc-900 text-[var(--color-lime-primary)] font-bold text-sm hover:opacity-90 active:scale-95 transition-all"
@@ -146,7 +124,7 @@ export default function DeliveryCard({ delivery, onPickUp, onDeliver }: Delivery
               Confirmar Coleta
             </button>
           )}
-          {(status === 'picked_up' || status === 'on_the_way') && onDeliver && (
+          {(status === DeliveryStatus.PICKED_UP || status === DeliveryStatus.ON_THE_WAY) && onDeliver && (
             <button
               onClick={() => onDeliver(delivery.id)}
               className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-[var(--color-lime-primary)] text-black font-bold text-sm hover:opacity-90 active:scale-95 transition-all"

@@ -9,6 +9,9 @@ import { DollarSign, ShoppingBag, TrendingUp, Users } from 'lucide-react';
 import useSessionStore from '@/store/session-store';
 import Spinner from '@/components/ui/Spinner';
 import { toast } from 'react-hot-toast';
+import { formatCurrency } from '@/lib/utils';
+import { POLL } from '@/lib/constants';
+import type { Order, Metrics } from '@/types';
 
 export default function DashboardPage() {
   const queryClient = useQueryClient();
@@ -16,20 +19,20 @@ export default function DashboardPage() {
 
   const { data: metrics, isLoading: loadingMetrics } = useQuery({
     queryKey: ['metrics', tenant?.id],
-    queryFn: () => get<any>(`/bff/admin/metrics?tenantId=${tenant?.id}`),
+    queryFn: () => get<Metrics>('/bff/api/admin/reports/summary'),
     enabled: !!tenant?.id,
   });
 
   const { data: orders, isLoading: loadingOrders } = useQuery({
     queryKey: ['admin-orders', tenant?.id],
-    queryFn: () => get<any>(`/bff/admin/orders?tenantId=${tenant?.id}`),
+    queryFn: () => get<Order[]>('/bff/api/admin/orders'),
     enabled: !!tenant?.id,
-    refetchInterval: 10_000,
+    refetchInterval: POLL.DASHBOARD,
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      patch<any>(`/bff/admin/orders/${id}/status`, { status }),
+      patch<Order>(`/bff/api/admin/orders/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       queryClient.invalidateQueries({ queryKey: ['metrics'] });
@@ -62,19 +65,19 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         <MetricsCard
           title="Faturamento"
-          value={`R$ ${metrics?.totalRevenue?.toFixed(2) || '0.00'}`}
+          value={formatCurrency(metrics && !('error' in metrics) ? metrics.totalRevenue ?? 0 : 0)}
           icon={DollarSign}
           trend={{ value: 12, isPositive: true }}
         />
         <MetricsCard
           title="Pedidos"
-          value={metrics?.orderCount || 0}
+          value={metrics && !('error' in metrics) ? metrics.orderCount ?? 0 : 0}
           icon={ShoppingBag}
           trend={{ value: 5, isPositive: true }}
         />
         <MetricsCard
           title="Ticket Médio"
-          value={`R$ ${(metrics?.totalRevenue / (metrics?.orderCount || 1)).toFixed(2)}`}
+          value={formatCurrency(metrics && !('error' in metrics) ? (metrics.totalRevenue ?? 0) / (metrics.orderCount || 1) : 0)}
           icon={TrendingUp}
         />
         <MetricsCard
@@ -94,7 +97,7 @@ export default function DashboardPage() {
         <OrderList
           orders={orders || []}
           onStatusUpdate={(id, status) => updateStatusMutation.mutate({ id, status })}
-          onViewDetails={(order) => console.log('View details', order)}
+          onViewDetails={() => { /* TODO: abrir modal de detalhes */ }}
         />
       </div>
     </div>

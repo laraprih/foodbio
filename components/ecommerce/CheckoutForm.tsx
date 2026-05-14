@@ -4,13 +4,14 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { checkoutSchema } from '@/lib/validations';
-import { Input } from '@/components/ui/Input';
+import Input from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Truck, Store, CreditCard, Landmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { CheckoutData } from '@/types';
 
 interface CheckoutFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CheckoutData) => void;
   loading?: boolean;
 }
 
@@ -21,7 +22,7 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
     watch,
     setValue,
     formState: { errors },
-  } = useForm({
+  } = useForm<CheckoutData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       deliveryType: 'delivery',

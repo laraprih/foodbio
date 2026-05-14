@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import Spinner from '@/components/ui/Spinner';
 
 interface Product {
@@ -60,7 +60,7 @@ export default function MenuCard({ product, onAdd, loading, restaurantSlug }: Me
         </p>
         <div className="flex items-center justify-between pt-1">
           <span className="font-extrabold text-zinc-900 text-[17px]">
-            R$ {product.price.toFixed(2)}
+            {formatCurrency(product.price)}
           </span>
           <button
             disabled={!product.available || loading}

@@ -1,13 +1,9 @@
-import NextAuth from 'next-auth';
-import GoogleProvider from 'next-auth/providers/google';
-import CredentialsProvider from 'next-auth/providers/credentials';
+import NextAuth from 'next-auth'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import type { JWT } from 'next-auth/jwt'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
     CredentialsProvider({
       name: 'Email e senha',
       credentials: {
@@ -15,51 +11,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Senha', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) return null
 
-        try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/login`, {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/auth/login`,
+          {
             method: 'POST',
             body: JSON.stringify(credentials),
             headers: { 'Content-Type': 'application/json' },
-          });
-
-          const user = await res.json();
-
-          if (res.ok && user) {
-            return {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              role: user.role,
-              restaurantId: user.restaurantId,
-              accessToken: user.token, // BFF calls it 'token' in Tarefa 7.19
-            };
           }
-          return null;
-        } catch (error) {
-          console.error('Auth error:', error);
-          return null;
+        )
+
+        if (!res.ok) return null
+
+        const user = await res.json()
+        if (!user?.id) return null
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          tenantId: user.tenantId,
+          accessToken: user.token,
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: { token: any; user: any }) {
+    async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
-        token.restaurantId = user.restaurantId;
-        token.accessToken = user.accessToken;
+        token.role = user.role
+        token.tenantId = user.tenantId
+        token.accessToken = user.accessToken
       }
-      return token;
+      return token
     },
-    async session({ session, token }: { session: any; token: any }) {
+    async session({ session, token }: { session: Parameters<NonNullable<Parameters<typeof NextAuth>[0]['callbacks']>['session']>[0]['session']; token: JWT }) {
+      session.accessToken = token.accessToken
       if (session.user) {
-        session.user.role = token.role;
-        session.user.restaurantId = token.restaurantId;
-        session.user.accessToken = token.accessToken;
+        (session.user as typeof session.user & { role?: string; tenantId?: string }).role = token.role
+        ;(session.user as typeof session.user & { role?: string; tenantId?: string }).tenantId = token.tenantId
       }
-      return session;
+      return session
     },
   },
   pages: {
@@ -68,4 +62,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: 'jwt',
   },
-});
+})

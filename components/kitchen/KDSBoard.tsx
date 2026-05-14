@@ -7,15 +7,17 @@ import KDSCard from './KDSCard'
 import Spinner from '@/components/ui/Spinner'
 import { toast } from 'react-hot-toast'
 import { useSocket } from '@/hooks/use-socket'
+import { POLL, OrderStatus } from '@/lib/constants'
+import type { Order } from '@/types'
 
 interface KDSBoardProps {
   tenantId: string
 }
 
 const COLUMNS = [
-  { id: 'confirmed', label: 'Novos Pedidos', status: 'confirmed', nextStatus: 'preparing', actionLabel: 'Iniciar Preparo', color: 'bg-blue-50 border-blue-200' },
-  { id: 'preparing', label: 'Em Preparo', status: 'preparing', nextStatus: 'ready', actionLabel: 'Marcar Pronto', color: 'bg-yellow-50 border-yellow-200' },
-  { id: 'ready', label: 'Prontos', status: 'ready', nextStatus: null, actionLabel: '', color: 'bg-green-50 border-green-200' },
+  { id: OrderStatus.CONFIRMED, label: 'Novos Pedidos', nextStatus: OrderStatus.PREPARING, color: 'bg-blue-50 border-blue-200' },
+  { id: OrderStatus.PREPARING, label: 'Em Preparo', nextStatus: OrderStatus.READY, color: 'bg-yellow-50 border-yellow-200' },
+  { id: OrderStatus.READY, label: 'Prontos', nextStatus: null, color: 'bg-green-50 border-green-200' },
 ]
 
 export default function KDSBoard({ tenantId }: KDSBoardProps) {
@@ -32,8 +34,8 @@ export default function KDSBoard({ tenantId }: KDSBoardProps) {
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['kds-orders', tenantId],
-    queryFn: () => get<any[]>(`/bff/api/kitchen/orders`),
-    refetchInterval: 15000,
+    queryFn: () => get<Order[]>(`/bff/api/kitchen/orders`),
+    refetchInterval: POLL.KDS,
   })
 
   const updateStatus = useMutation({
@@ -103,7 +105,7 @@ export default function KDSBoard({ tenantId }: KDSBoardProps) {
 
       <div className="flex-1 grid grid-cols-3 gap-6 p-6 overflow-hidden">
         {COLUMNS.map((col) => {
-          const colOrders = orders.filter((o: any) => o.status === col.status)
+          const colOrders = orders.filter((o: Order) => o.status === col.id)
           return (
             <div key={col.id} className="flex flex-col min-h-0">
               <div className={`flex items-center justify-between px-4 py-3 rounded-2xl border-2 mb-4 ${col.color}`}>
@@ -119,7 +121,7 @@ export default function KDSBoard({ tenantId }: KDSBoardProps) {
                     Nenhum pedido
                   </div>
                 )}
-                {colOrders.map((order: any) => (
+                {colOrders.map((order: Order) => (
                   <KDSCard
                     key={order.id}
                     order={order}

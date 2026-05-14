@@ -1,12 +1,14 @@
-import React from 'react';
-import Badge from '@/components/ui/Badge';
-import { Eye, CheckCircle, Clock } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React from 'react'
+import Badge from '@/components/ui/Badge'
+import { Eye, CheckCircle, Clock } from 'lucide-react'
+import { formatCurrency, formatOrderTime } from '@/lib/utils'
+import { OrderStatus } from '@/lib/constants'
+import type { Order } from '@/types'
 
 interface OrderListProps {
-  orders: any[];
-  onStatusUpdate: (id: string, status: string) => void;
-  onViewDetails: (order: any) => void;
+  orders: Order[]
+  onStatusUpdate: (id: string, status: OrderStatus) => void
+  onViewDetails: (order: Order) => void
 }
 
 export default function OrderList({ orders, onStatusUpdate, onViewDetails }: OrderListProps) {
@@ -27,16 +29,14 @@ export default function OrderList({ orders, onStatusUpdate, onViewDetails }: Ord
             <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
               <td className="px-6 py-4">
                 <span className="font-bold text-gray-900">#{order.id.slice(-6)}</span>
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  {new Date(order.createdAt).toLocaleTimeString()}
-                </p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{formatOrderTime(order.createdAt)}</p>
               </td>
               <td className="px-6 py-4">
                 <span className="font-bold text-gray-700">{order.customerName}</span>
                 <p className="text-xs text-gray-400">{order.customerPhone}</p>
               </td>
               <td className="px-6 py-4">
-                <span className="font-black text-gray-900">R$ {order.total.toFixed(2)}</span>
+                <span className="font-black text-gray-900">{formatCurrency(order.total)}</span>
               </td>
               <td className="px-6 py-4">
                 <Badge status={order.status} />
@@ -50,18 +50,18 @@ export default function OrderList({ orders, onStatusUpdate, onViewDetails }: Ord
                   >
                     <Eye className="w-5 h-5" />
                   </button>
-                  {order.status === 'PENDING' && (
+                  {order.status === OrderStatus.PENDING && (
                     <button
-                      onClick={() => onStatusUpdate(order.id, 'CONFIRMED')}
+                      onClick={() => onStatusUpdate(order.id, OrderStatus.CONFIRMED)}
                       className="p-2 hover:bg-green-50 rounded-lg transition-colors text-green-600"
                       title="Confirmar Pedido"
                     >
                       <CheckCircle className="w-5 h-5" />
                     </button>
                   )}
-                  {order.status === 'CONFIRMED' && (
+                  {order.status === OrderStatus.CONFIRMED && (
                     <button
-                      onClick={() => onStatusUpdate(order.id, 'PREPARING')}
+                      onClick={() => onStatusUpdate(order.id, OrderStatus.PREPARING)}
                       className="p-2 hover:bg-orange-50 rounded-lg transition-colors text-orange-600"
                       title="Iniciar Preparo"
                     >
@@ -75,10 +75,8 @@ export default function OrderList({ orders, onStatusUpdate, onViewDetails }: Ord
         </tbody>
       </table>
       {orders.length === 0 && (
-        <div className="py-20 text-center text-gray-400">
-          Nenhum pedido encontrado.
-        </div>
+        <div className="py-20 text-center text-gray-400">Nenhum pedido encontrado.</div>
       )}
     </div>
-  );
+  )
 }

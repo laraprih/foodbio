@@ -1,4 +1,5 @@
 import { getSession, signOut } from 'next-auth/react';
+import type { Session } from 'next-auth';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -9,8 +10,8 @@ export function isApiError(r: unknown): r is ApiError {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T | ApiError> {
-  const session = await getSession();
-  const token = (session as any)?.accessToken;
+  const session = await getSession() as (Session & { accessToken?: string }) | null;
+  const token = session?.accessToken;
 
   const headers = new Headers(options.headers);
   headers.set('Content-Type', 'application/json');
@@ -21,10 +22,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T | 
   const url = path.startsWith('http') ? path : `${BASE_URL}${path}`;
 
   try {
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    const response = await fetch(url, { ...options, headers });
 
     if (response.status === 401) {
       signOut({ callbackUrl: '/login' });
@@ -38,8 +36,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T | 
     }
 
     return data as T;
-  } catch (error) {
-    console.error('API Request Error:', error);
+  } catch {
     return { error: 'Sem conexão com o servidor', status: 0 };
   }
 }

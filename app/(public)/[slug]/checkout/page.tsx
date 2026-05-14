@@ -12,6 +12,8 @@ import Modal from '@/components/ui/Modal';
 import useSessionStore from '@/store/session-store';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
+import { formatCurrency } from '@/lib/utils';
+import type { CheckoutData } from '@/types';
 
 export default function CheckoutPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -21,12 +23,12 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
   
   const [orderId, setOrderId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [checkoutData, setCheckoutData] = useState<any>(null);
+  const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
 
   const { mutate: createOrder, isPending: isCreating } = useCreateOrder();
   const { mutate: payOrder, isPending: isPaying } = usePayOrder();
 
-  const handleCheckoutSubmit = (data: any) => {
+  const handleCheckoutSubmit = (data: CheckoutData) => {
     if (!tenant) return;
     setCheckoutData(data);
 
@@ -45,7 +47,11 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
     };
 
     createOrder(payload, {
-      onSuccess: (response: any) => {
+      onSuccess: (response) => {
+        if (!response || 'error' in response) {
+          toast.error('error' in response ? response.error : 'Erro ao criar pedido')
+          return
+        }
         setOrderId(response.orderId);
         if (data.paymentMethod === 'pix') {
           router.push(`/${slug}/pedido/${response.orderId}`);
@@ -54,8 +60,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
           setShowPaymentModal(true);
         }
       },
-      onError: (err: any) => {
-        toast.error(err.message || 'Erro ao criar pedido');
+      onError: (err) => {
+        toast.error(err instanceof Error ? err.message : 'Erro ao criar pedido');
       }
     });
   };
@@ -76,8 +82,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
         clearCart();
         router.push(`/${slug}/pedido/${orderId}`);
       },
-      onError: (err: any) => {
-        toast.error(err.message || 'Erro no pagamento');
+      onError: (err) => {
+        toast.error(err instanceof Error ? err.message : 'Erro no pagamento');
       }
     });
   };
@@ -110,7 +116,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
-              <span className="font-bold text-gray-900">R$ {cartSubtotal.toFixed(2)}</span>
+              <span className="font-bold text-gray-900">{formatCurrency(cartSubtotal)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Taxa de entrega</span>

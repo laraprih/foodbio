@@ -1,35 +1,36 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useSocketContext } from '@/components/providers/SocketProvider';
+import { useEffect, useState, useCallback } from 'react'
+import { useSocketContext } from '@/components/providers/SocketProvider'
 
-export function useSocket(room?: string) {
-  const { socket, connected: contextConnected } = useSocketContext();
-  const [connected, setConnected] = useState(contextConnected);
+type SocketListeners = Record<string, (data: unknown) => void>
 
-  useEffect(() => {
-    setConnected(contextConnected);
-  }, [contextConnected]);
+export function useSocket(room?: string, listeners?: SocketListeners) {
+  const { socket, connected: contextConnected } = useSocketContext()
+  const [connected, setConnected] = useState(contextConnected)
 
   useEffect(() => {
-    if (!socket || !room) return;
+    setConnected(contextConnected)
+  }, [contextConnected])
 
-    socket.emit('join', room);
+  // Join/leave room
+  useEffect(() => {
+    if (!socket || !room) return
+    socket.emit('join', room)
+    return () => { socket.emit('leave', room) }
+  }, [socket, room])
 
-    return () => {
-      socket.emit('leave', room);
-    };
-  }, [socket, room]);
+  // Register event listeners
+  useEffect(() => {
+    if (!socket || !listeners) return
+    const entries = Object.entries(listeners)
+    entries.forEach(([event, handler]) => socket.on(event, handler))
+    return () => { entries.forEach(([event, handler]) => socket.off(event, handler)) }
+  }, [socket, listeners])
 
-  const emit = useCallback((event: string, data?: any) => {
-    if (socket && socket.connected) {
-      socket.emit(event as any, data);
-    } else {
-      console.warn('Socket not connected. Could not emit:', event);
+  const emit = useCallback((event: string, data?: unknown) => {
+    if (socket?.connected) {
+      socket.emit(event, data)
     }
-  }, [socket]);
+  }, [socket])
 
-  return {
-    socket,
-    connected,
-    emit,
-  };
+  return { socket, connected, emit }
 }

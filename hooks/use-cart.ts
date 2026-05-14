@@ -31,11 +31,12 @@ export const useCart = () => {
     try {
       addItem(product, options, resId, resSlug);
       return { success: true };
-    } catch (error: any) {
-      if (error.message.includes("outro restaurante")) {
-        return { needsConfirm: true, message: error.message };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : ''
+      if (msg.includes('outro restaurante')) {
+        return { needsConfirm: true, message: msg }
       }
-      throw error;
+      throw error
     }
   };
 
