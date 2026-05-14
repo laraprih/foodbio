@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { serverGet } from '@/lib/server-api';
+import { getTenantBySlugDirect, getTenantMenuDirect } from '@/lib/store-db';
 import RestaurantShell from '@/components/ecommerce/RestaurantShell';
 
 export default async function RestaurantPage({
@@ -9,12 +9,10 @@ export default async function RestaurantPage({
 }) {
   const { slug } = await params;
 
-  const [tenant, menu] = await Promise.all([
-    serverGet<any>(`/api/store/${slug}`, 0),
-    serverGet<any>(`/api/store/${slug}/menu`, 0),
-  ]);
-
+  const tenant = await getTenantBySlugDirect(slug);
   if (!tenant) notFound();
+
+  const menu = await getTenantMenuDirect(tenant.id);
 
   return <RestaurantShell tenant={tenant} menu={menu} slug={slug} />;
 }
