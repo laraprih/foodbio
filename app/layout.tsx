@@ -6,7 +6,7 @@ import AuthProvider from '@/components/providers/AuthProvider'
 import SocketProvider from '@/components/providers/SocketProvider'
 import { Toaster } from '@/components/ui/Toast'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap', preload: false })
 
 export const metadata: Metadata = {
   title: 'Foodin — Delivery',
