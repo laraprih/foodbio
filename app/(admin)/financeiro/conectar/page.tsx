@@ -27,7 +27,7 @@ export default function ConectarContaPage() {
 
   const handleConnectMP = async () => {
     setLoadingMP(true)
-    const res = await get<{ url: string }>('/bff/api/admin/payment/mp/authorize')
+    const res = await get<{ url: string }>('/api/admin/payment/mp/authorize')
     if (isApiError(res)) {
       toast.error('Erro ao gerar URL de autorização')
       setLoadingMP(false)
@@ -37,7 +37,7 @@ export default function ConectarContaPage() {
   }
 
   const handleConnectPB = async (data: PBForm) => {
-    const res = await post('/bff/api/admin/payment/pb/connect', data)
+    const res = await post('/api/admin/payment/pb/connect', data)
     if (isApiError(res)) {
       toast.error(res.error)
       return
@@ -113,7 +113,7 @@ export default function ConectarContaPage() {
       </div>
 
       <p className="mt-8 text-xs text-gray-400 text-center leading-relaxed">
-        Ao conectar sua conta, você autoriza o Foodin a processar pagamentos em seu nome com split automático.
+        Ao conectar sua conta, você autoriza o Foodbio a processar pagamentos em seu nome com split automático.
         A comissão da plataforma é descontada no momento da transação — sem cobranças mensais.
       </p>
     </div>

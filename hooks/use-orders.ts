@@ -45,7 +45,7 @@ export function usePayOrder() {
 
   return useMutation({
     mutationFn: ({ id, paymentData }: { id: string; paymentData: PayOrderPayload }) =>
-      post<{ status: string }>(`/bff/api/client/orders/${id}/pay`, paymentData),
+      post<{ status: string }>(`/api/store/orders/${id}/pay`, paymentData),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['order', variables.id] })
     },
@@ -55,7 +55,7 @@ export function usePayOrder() {
 export function useAdminOrders(filters?: { status?: string; page?: number; limit?: number }) {
   return useQuery({
     queryKey: ['admin-orders', filters],
-    queryFn: () => get<Order[]>('/bff/api/admin/orders', filters as Record<string, string>),
+    queryFn: () => get<Order[]>('/api/admin/orders', filters as Record<string, string>),
     staleTime: POLL.ORDERS,
   })
 }

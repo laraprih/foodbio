@@ -5,14 +5,11 @@ import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 
-// Extract tenantId from JWT token
-function getTenantId(request: FastifyRequest): string | null {
+async function verifyAndGetTenantId(request: FastifyRequest): Promise<string | null> {
   try {
-    const auth = request.headers.authorization;
-    if (!auth?.startsWith('Bearer ')) return null;
-    const token = auth.slice(7);
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    return payload.tenantId ?? null;
+    await request.jwtVerify();
+    const payload = request.user as any;
+    return payload?.tenantId ?? null;
   } catch {
     return null;
   }
@@ -23,7 +20,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   // ── Tenant / Store Settings ──────────────────────────────────────────────────
 
   fastify.get('/tenant', async (request: any, reply) => {
-    const tenantId = getTenantId(request);
+    const tenantId = await verifyAndGetTenantId(request);
     if (!tenantId) return reply.status(401).send({ error: 'Não autorizado' });
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -34,7 +31,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   });
 
   fastify.patch('/tenant', async (request: any, reply) => {
-    const tenantId = getTenantId(request);
+    const tenantId = await verifyAndGetTenantId(request);
     if (!tenantId) return reply.status(401).send({ error: 'Não autorizado' });
     const { name, phone, address, city, state, logoUrl, logoFormat, coverUrl, deliveryFee, minOrderValue, deliveryRadius } = request.body;
     const data: Record<string, unknown> = {};
@@ -57,7 +54,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   // ── Orders ──────────────────────────────────────────────────────────────────
 
   fastify.get('/orders', async (request: any) => {
-    const tenantId = getTenantId(request) ?? request.query.tenantId;
+    const tenantId = (await verifyAndGetTenantId(request)) ?? request.query.tenantId;
     return prisma.order.findMany({
       where: { tenantId },
       include: { items: { include: { product: { select: { name: true } } } } },
@@ -75,7 +72,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   // ── Metrics / Reports ────────────────────────────────────────────────────────
 
   fastify.get('/reports/summary', async (request: any) => {
-    const tenantId = getTenantId(request) ?? request.query.tenantId;
+    const tenantId = (await verifyAndGetTenantId(request)) ?? request.query.tenantId;
     const orders = await prisma.order.findMany({ where: { tenantId } });
     const totalRevenue = orders.reduce((s, o) => s + o.total, 0);
     return { totalRevenue, orderCount: orders.length };
@@ -84,7 +81,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   // ── Menu ─────────────────────────────────────────────────────────────────────
 
   fastify.get('/menu', async (request: any) => {
-    const tenantId = getTenantId(request) ?? request.query.tenantId;
+    const tenantId = (await verifyAndGetTenantId(request)) ?? request.query.tenantId;
     const categories = await prisma.category.findMany({
       where: { tenantId },
       include: {
@@ -100,7 +97,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   // ── Categories ───────────────────────────────────────────────────────────────
 
   fastify.post('/menu/categories', async (request: any, reply) => {
-    const tenantId = getTenantId(request);
+    const tenantId = await verifyAndGetTenantId(request);
     if (!tenantId) return reply.status(401).send({ error: 'Não autorizado' });
     const { name, order } = request.body;
     const category = await prisma.category.create({
@@ -111,7 +108,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   });
 
   fastify.patch('/menu/categories/:id', async (request: any, reply) => {
-    const tenantId = getTenantId(request);
+    const tenantId = await verifyAndGetTenantId(request);
     if (!tenantId) return reply.status(401).send({ error: 'Não autorizado' });
     const { id } = request.params;
     const { name, order, active } = request.body;
@@ -124,7 +121,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   });
 
   fastify.delete('/menu/categories/:id', async (request: any, reply) => {
-    const tenantId = getTenantId(request);
+    const tenantId = await verifyAndGetTenantId(request);
     if (!tenantId) return reply.status(401).send({ error: 'Não autorizado' });
     const { id } = request.params;
     const count = await prisma.product.count({ where: { categoryId: id, tenantId } });
@@ -137,7 +134,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   // ── Products ─────────────────────────────────────────────────────────────────
 
   fastify.post('/menu/products', async (request: any, reply) => {
-    const tenantId = getTenantId(request);
+    const tenantId = await verifyAndGetTenantId(request);
     if (!tenantId) return reply.status(401).send({ error: 'Não autorizado' });
     const { name, description, price, categoryId, imageUrl, available, sortOrder } = request.body;
     const product = await prisma.product.create({
@@ -148,7 +145,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   });
 
   fastify.patch('/menu/products/:id', async (request: any, reply) => {
-    const tenantId = getTenantId(request);
+    const tenantId = await verifyAndGetTenantId(request);
     if (!tenantId) return reply.status(401).send({ error: 'Não autorizado' });
     const { id } = request.params;
     const { name, description, price, categoryId, imageUrl, available, sortOrder } = request.body;
@@ -166,7 +163,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   });
 
   fastify.patch('/menu/products/:id/availability', async (request: any, reply) => {
-    const tenantId = getTenantId(request);
+    const tenantId = await verifyAndGetTenantId(request);
     if (!tenantId) return reply.status(401).send({ error: 'Não autorizado' });
     const { id } = request.params;
     const current = await prisma.product.findUnique({ where: { id, tenantId } });
@@ -177,7 +174,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   });
 
   fastify.delete('/menu/products/:id', async (request: any, reply) => {
-    const tenantId = getTenantId(request);
+    const tenantId = await verifyAndGetTenantId(request);
     if (!tenantId) return reply.status(401).send({ error: 'Não autorizado' });
     const { id } = request.params;
     await prisma.product.delete({ where: { id, tenantId } });
@@ -188,7 +185,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   // ── Image Upload ─────────────────────────────────────────────────────────────
 
   fastify.post('/upload', async (request: any, reply) => {
-    const tenantId = getTenantId(request);
+    const tenantId = await verifyAndGetTenantId(request);
     if (!tenantId) return reply.status(401).send({ error: 'Não autorizado' });
 
     const data = await request.file();

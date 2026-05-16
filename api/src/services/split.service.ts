@@ -10,7 +10,7 @@ export async function processSplit(params: {
   gateway: string
   payerEmail?: string
 }) {
-  const { orderId, token, gateway, payerEmail = 'cliente@foodin.com.br' } = params
+  const { orderId, token, gateway, payerEmail = 'cliente@foodbio.com.br' } = params
 
   // Idempotência: não reprocessar pedido já pago
   const existing = await prisma.order.findUnique({
@@ -43,7 +43,7 @@ export async function processSplit(params: {
         marketplaceFee,
         paymentMethodId: token ? 'credit_card' : 'pix',
         token: token || undefined,
-        externalReference: `foodin_${orderId}`,
+        externalReference: `foodbio_${orderId}`,
         payerEmail,
       })
       gatewayTransactionId = String((gatewayResponse as Record<string, unknown>).id ?? '')
@@ -54,7 +54,7 @@ export async function processSplit(params: {
         receiverPercent: account.commissionPercent === 8 ? 92 : 100 - account.commissionPercent,
         token: token || undefined,
         paymentType: token ? 'credit_card' : 'pix',
-        externalReference: `foodin_${orderId}`,
+        externalReference: `foodbio_${orderId}`,
       })
       const charge = (gatewayResponse.charges as Record<string, unknown>[])?.[0]
       gatewayTransactionId = String(charge?.id ?? '')
@@ -103,7 +103,7 @@ export async function processSplit(params: {
       data: {
         paymentStatus: 'approved',
         status: 'confirmed',
-        externalReference: `foodin_${orderId}`,
+        externalReference: `foodbio_${orderId}`,
       },
     }),
   ])

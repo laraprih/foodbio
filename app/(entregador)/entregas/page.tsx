@@ -14,7 +14,7 @@ export default function EntregasPage() {
 
   const { data: deliveries, isLoading } = useQuery({
     queryKey: ['my-deliveries'],
-    queryFn: () => get<any[]>('/bff/api/delivery'),
+    queryFn: () => get<any[]>('/api/delivery'),
     refetchInterval: 20000,
   });
 
@@ -23,13 +23,13 @@ export default function EntregasPage() {
   });
 
   const pickUp = useMutation({
-    mutationFn: (id: string) => patch(`/bff/api/delivery/${id}/pickup`, {}),
+    mutationFn: (id: string) => patch(`/api/delivery/${id}`, { action: 'pickup' }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-deliveries'] }); toast.success('Coleta confirmada!'); },
     onError: () => toast.error('Erro ao confirmar coleta'),
   });
 
   const deliver = useMutation({
-    mutationFn: (id: string) => patch(`/bff/api/delivery/${id}/deliver`, {}),
+    mutationFn: (id: string) => patch(`/api/delivery/${id}`, { action: 'deliver' }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-deliveries'] }); toast.success('Entrega confirmada!'); },
     onError: () => toast.error('Erro ao confirmar entrega'),
   });

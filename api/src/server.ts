@@ -15,6 +15,7 @@ import { kitchenRoutes } from './routes/kitchen.routes'
 import { deliveryRoutes } from './routes/delivery.routes'
 import { webhookRoutes } from './routes/webhooks.routes'
 import { healthRoutes } from './routes/health.routes'
+import { internalRoutes } from './routes/internal.routes'
 
 const fastify = Fastify({ logger: false }) // Pino gerenciado por logger.ts
 
@@ -87,7 +88,7 @@ async function bootstrap() {
     }
 
     if (!user) {
-      const email = profile.email ?? `fb_${profile.id}@foodin.social`
+      const email = profile.email ?? `fb_${profile.id}@foodbio.social`
       user = await prisma.user.create({
         data: {
           name: profile.name ?? 'Usuário',
@@ -123,10 +124,11 @@ async function bootstrap() {
   await fastify.register(kitchenRoutes,  { prefix: '/api/kitchen' })
   await fastify.register(deliveryRoutes, { prefix: '/api/delivery' })
   await fastify.register(webhookRoutes,  { prefix: '/api/webhooks' })
+  await fastify.register(internalRoutes, { prefix: '/api/internal' })
 
   const port = Number(process.env.PORT ?? 3001)
   await fastify.listen({ port, host: '0.0.0.0' })
-  logger.info({ port, env: process.env.NODE_ENV }, 'Foodin API started')
+  logger.info({ port, env: process.env.NODE_ENV }, 'Foodbio API started')
 
   // Socket.io sobre o mesmo HTTP server
   initSocket(fastify.server)

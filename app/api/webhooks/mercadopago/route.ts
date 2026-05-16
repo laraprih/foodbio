@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPool } from '@/lib/db'
 import { createHmac } from 'crypto'
+import { serverEmit } from '@/lib/server-emit'
 
 export const dynamic = 'force-dynamic'
 
@@ -101,16 +102,34 @@ export async function POST(req: NextRequest) {
   if (!orderId) return NextResponse.json({ ok: true })
 
   if (mpStatus === 'approved') {
-    await pool.query(
+    const { rowCount } = await pool.query(
       `UPDATE "Order" SET "paymentStatus" = 'approved', status = 'confirmed', "updatedAt" = NOW()
-       WHERE id = $1 AND "paymentStatus" != 'approved'`,
+       WHERE id = $1 AND "paymentStatus" != 'approved'
+       RETURNING "tenantId"`,
       [orderId]
     )
-    await pool.query(
-      `UPDATE "PaymentTransaction" SET "splitStatus" = 'done', "processedAt" = NOW()
-       WHERE "orderId" = $1`,
-      [orderId]
-    )
+
+    if (rowCount && rowCount > 0) {
+      // Busca tenantId para emitir nas salas corretas
+      const tenantRes = await pool.query(
+        `SELECT "tenantId" FROM "Order" WHERE id = $1`,
+        [orderId]
+      )
+      const tenantId: string = tenantRes.rows[0]?.tenantId ?? ''
+
+      await pool.query(
+        `UPDATE "PaymentTransaction" SET "splitStatus" = 'done', "processedAt" = NOW()
+         WHERE "orderId" = $1`,
+        [orderId]
+      )
+
+      // Notifica: cliente acompanhando o pedido + cozinha + admin
+      await serverEmit({
+        rooms: [`order:${orderId}`, `kitchen:${tenantId}`, `admin:${tenantId}`],
+        event: 'order:confirmed',
+        data: { orderId, status: 'confirmed' },
+      })
+    }
   } else if (mpStatus === 'rejected' || mpStatus === 'cancelled') {
     await pool.query(
       `UPDATE "Order" SET "paymentStatus" = 'failed', "updatedAt" = NOW()
@@ -121,6 +140,12 @@ export async function POST(req: NextRequest) {
       `UPDATE "PaymentTransaction" SET "splitStatus" = 'failed' WHERE "orderId" = $1`,
       [orderId]
     )
+
+    await serverEmit({
+      rooms: [`order:${orderId}`],
+      event: 'order:payment-failed',
+      data: { orderId, message: 'Pagamento não aprovado. Tente novamente.' },
+    })
   } else if (mpStatus === 'refunded') {
     await pool.query(
       `UPDATE "Order" SET "paymentStatus" = 'refunded', "updatedAt" = NOW() WHERE id = $1`,
@@ -130,6 +155,12 @@ export async function POST(req: NextRequest) {
       `UPDATE "PaymentTransaction" SET "splitStatus" = 'refunded' WHERE "orderId" = $1`,
       [orderId]
     )
+
+    await serverEmit({
+      rooms: [`order:${orderId}`],
+      event: 'order:update',
+      data: { orderId, status: 'refunded' },
+    })
   }
 
   console.info(`[webhook/mp] payment=${paymentId} status=${mpStatus} order=${orderId}`)

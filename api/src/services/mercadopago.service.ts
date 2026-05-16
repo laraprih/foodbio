@@ -74,7 +74,7 @@ export async function generatePixQR(orderId: string, amount: number) {
       transaction_amount: amount,
       payment_method_id: 'pix',
       external_reference: orderId,
-      payer: { email: 'cliente@foodin.com.br' },
+      payer: { email: 'cliente@foodbio.com.br' },
     }),
   })
 
@@ -85,9 +85,15 @@ export async function generatePixQR(orderId: string, amount: number) {
   }
 }
 
-export function validateWebhookSignature(signature: string, requestId: string, rawBody: string): boolean {
+export function validateWebhookSignature(
+  signature: string,
+  requestId: string,
+  ts: string,
+  rawBody: string
+): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET ?? ''
-  const manifest = `id:${requestId};request-id:${requestId};ts:${Date.now()};`
+  if (!secret) return false
+  const manifest = `id:${requestId};request-id:${requestId};ts:${ts};`
   const expected = createHmac('sha256', secret).update(manifest + rawBody).digest('hex')
-  return signature === `ts=${Date.now()},v1=${expected}` || signature.includes(expected)
+  return signature.includes(expected)
 }

@@ -89,7 +89,7 @@ export default function AdminLoginPage() {
           <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
             <span className="text-[var(--color-lime-primary)] font-black text-2xl">F</span>
           </div>
-          <h1 className="text-4xl font-black text-white mb-3 tracking-tight">Foodin</h1>
+          <h1 className="text-4xl font-black text-white mb-3 tracking-tight">Foodbio</h1>
           <p className="text-white/75 text-lg max-w-sm leading-relaxed">
             Painel administrativo — gerencie seu restaurante com facilidade.
           </p>
@@ -103,7 +103,7 @@ export default function AdminLoginPage() {
           <div className="w-9 h-9 bg-[var(--color-lime-primary)] rounded-xl flex items-center justify-center">
             <span className="text-white font-black">F</span>
           </div>
-          <span className="font-black text-gray-900 text-lg">Foodin <span className="text-[var(--color-lime-primary)] text-sm">admin</span></span>
+          <span className="font-black text-gray-900 text-lg">Foodbio <span className="text-[var(--color-lime-primary)] text-sm">admin</span></span>
         </div>
 
         <Suspense fallback={<div className="flex-1" />}>

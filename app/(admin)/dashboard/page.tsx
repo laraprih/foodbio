@@ -6,7 +6,6 @@ import { get, patch } from '@/lib/api-client';
 import MetricsCard from '@/components/admin/MetricsCard';
 import OrderList from '@/components/admin/OrderList';
 import { DollarSign, ShoppingBag, TrendingUp, Users, RefreshCw, Store } from 'lucide-react';
-import useSessionStore from '@/store/session-store';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
@@ -15,24 +14,20 @@ import type { Order, Metrics } from '@/types';
 
 export default function DashboardPage() {
   const queryClient = useQueryClient();
-  const { tenant } = useSessionStore();
-
   const { data: metrics, isLoading: loadingMetrics } = useQuery({
-    queryKey: ['metrics', tenant?.id],
-    queryFn: () => get<Metrics>('/bff/api/admin/reports/summary'),
-    enabled: !!tenant?.id,
+    queryKey: ['metrics'],
+    queryFn: () => get<Metrics>('/api/admin/reports/summary'),
   });
 
   const { data: orders, isLoading: loadingOrders, refetch } = useQuery({
-    queryKey: ['admin-orders', tenant?.id],
-    queryFn: () => get<Order[]>('/bff/api/admin/orders'),
-    enabled: !!tenant?.id,
+    queryKey: ['admin-orders'],
+    queryFn: () => get<Order[]>('/api/admin/orders'),
     refetchInterval: POLL.DASHBOARD,
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      patch<Order>(`/bff/api/admin/orders/${id}/status`, { status }),
+      patch<Order>(`/api/admin/orders/${id}`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       queryClient.invalidateQueries({ queryKey: ['metrics'] });
@@ -121,15 +116,13 @@ export default function DashboardPage() {
               title="Faturamento"
               value={formatCurrency(safeMetrics?.totalRevenue ?? 0)}
               icon={DollarSign}
-              trend={{ value: 12, isPositive: true }}
-              description="vs. mês anterior"
+              description="total acumulado"
             />
             <MetricsCard
               title="Pedidos"
               value={safeMetrics?.orderCount ?? 0}
               icon={ShoppingBag}
-              trend={{ value: 5, isPositive: true }}
-              description="hoje"
+              description="total acumulado"
             />
             <MetricsCard
               title="Ticket Médio"
@@ -141,9 +134,8 @@ export default function DashboardPage() {
             />
             <MetricsCard
               title="Clientes"
-              value={8}
+              value={safeMetrics?.newCustomers ?? 0}
               icon={Users}
-              trend={{ value: 2, isPositive: false }}
               description="novos hoje"
             />
           </div>

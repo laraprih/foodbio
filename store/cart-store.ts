@@ -111,7 +111,7 @@ export const useCartStore = create<CartState>()(
       setRestaurant: (id, slug) => set({ restaurantId: id, restaurantSlug: slug }),
     }),
     {
-      name: 'foodin-cart-v1',
+      name: 'foodbio-cart-v1',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         items: state.items,

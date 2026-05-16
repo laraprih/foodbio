@@ -1,6 +1,6 @@
 {
-  "name": "Foodin — Delivery",
-  "short_name": "Foodin",
+  "name": "Foodbio — Delivery",
+  "short_name": "Foodbio",
   "description": "Peça comida do seu restaurante favorito",
   "start_url": "/",
   "display": "standalone",

@@ -21,12 +21,12 @@ interface FinanceiroSummary {
 export default function FinanceiroPage() {
   const { data: summary, isLoading } = useQuery({
     queryKey: ['financeiro-summary'],
-    queryFn: () => get<FinanceiroSummary>('/bff/api/admin/reports/summary'),
+    queryFn: () => get<FinanceiroSummary>('/api/admin/reports/summary'),
   })
 
   const { data: transactions, isLoading: loadingTx } = useQuery({
     queryKey: ['transactions'],
-    queryFn: () => get<any[]>('/bff/api/admin/reports/splits'),
+    queryFn: () => get<any[]>('/api/admin/reports/splits'),
   })
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })

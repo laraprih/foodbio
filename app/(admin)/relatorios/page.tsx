@@ -23,7 +23,7 @@ export default function RelatoriosPage() {
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['sales-report', period],
-    queryFn: () => get<SalesReport>(`/bff/api/admin/reports/sales?period=${period}`),
+    queryFn: () => get<SalesReport>(`/api/admin/reports/sales?period=${period}`),
   })
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })

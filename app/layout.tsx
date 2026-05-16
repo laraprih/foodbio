@@ -9,7 +9,7 @@ import { Toaster } from '@/components/ui/Toast'
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap', preload: false })
 
 export const metadata: Metadata = {
-  title: 'Foodin — Delivery',
+  title: 'Foodbio — Delivery',
   description: 'Peça agora no seu restaurante favorito',
   manifest: '/manifest.json',
 }

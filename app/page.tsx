@@ -12,7 +12,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 bg-[var(--color-lime-primary)] rounded-xl flex items-center justify-center">
               <span className="text-white font-black text-sm">F</span>
             </div>
-            <span className="font-black text-gray-900 text-lg tracking-tight">Foodin</span>
+            <span className="font-black text-gray-900 text-lg tracking-tight">Foodbio</span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">Funcionalidades</a>
@@ -115,7 +115,7 @@ export default function LandingPage() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-14">
               <span className="text-xs font-black text-white bg-[var(--color-lime-primary)] px-3 py-1 rounded-full uppercase tracking-widest">Funcionalidades</span>
-              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-4 mb-3">Por que escolher o Foodin?</h2>
+              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-4 mb-3">Por que escolher o Foodbio?</h2>
               <p className="text-gray-500 max-w-lg mx-auto">Tudo que você precisa para uma experiência de delivery completa e sem complicações.</p>
             </div>
 
@@ -317,9 +317,9 @@ export default function LandingPage() {
             <div className="w-7 h-7 bg-[var(--color-lime-primary)] rounded-lg flex items-center justify-center">
               <span className="text-white font-black text-xs">F</span>
             </div>
-            <span className="font-black text-gray-900 text-sm">Foodin</span>
+            <span className="font-black text-gray-900 text-sm">Foodbio</span>
           </div>
-          <p className="text-xs text-gray-400 font-medium">© 2026 Foodin. Todos os direitos reservados.</p>
+          <p className="text-xs text-gray-400 font-medium">© 2026 Foodbio. Todos os direitos reservados.</p>
           <div className="flex gap-6">
             <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors font-medium">Privacidade</a>
             <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors font-medium">Termos</a>

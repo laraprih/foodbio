@@ -6,24 +6,21 @@ import { get, patch } from '@/lib/api-client';
 import KDSCard from '@/components/kitchen/KDSCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from 'react-hot-toast';
-import useSessionStore from '@/store/session-store';
 import { useSocket } from '@/hooks/use-socket';
 
 export default function KDSBoard() {
   const queryClient = useQueryClient();
-  const { tenant } = useSessionStore();
-  const { connected } = useSocket(`kds:${tenant?.id}`);
+  const { connected } = useSocket('kds');
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: ['kds-orders', tenant?.id],
-    queryFn: () => get<any>(`/bff/admin/orders?tenantId=${tenant?.id}&status=CONFIRMED,PREPARING`),
-    enabled: !!tenant?.id,
-    refetchInterval: 5000, // Sync rapid
+    queryKey: ['kds-orders'],
+    queryFn: () => get<any>('/api/admin/orders'),
+    refetchInterval: 5000,
   });
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      patch<any>(`/bff/admin/orders/${id}/status`, { status }),
+      patch<any>(`/api/admin/orders/${id}`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kds-orders'] });
       toast.success('Pedido atualizado');
@@ -64,8 +61,9 @@ export default function KDSBoard() {
     );
   }
 
-  const preparingOrders = orders?.filter((o: any) => o.status === 'PREPARING') || [];
-  const incomingOrders = orders?.filter((o: any) => o.status === 'CONFIRMED') || [];
+  const ordersArr = Array.isArray(orders) ? orders : [];
+  const preparingOrders = ordersArr.filter((o: any) => o.status === 'preparing');
+  const incomingOrders = ordersArr.filter((o: any) => o.status === 'confirmed');
 
   return (
     <div className="flex flex-col h-screen bg-zinc-100">
@@ -82,7 +80,7 @@ export default function KDSBoard() {
             </p>
           </div>
           <div className="w-12 h-12 bg-zinc-800 rounded-2xl flex items-center justify-center font-black text-xl">
-            {orders?.length || 0}
+            {ordersArr.length}
           </div>
         </div>
       </header>
@@ -93,8 +91,8 @@ export default function KDSBoard() {
           <KDSCard
             key={order.id}
             order={order}
-            onComplete={(id) => updateStatus.mutate({ id, status: 'READY' })}
-            onCancel={(id) => updateStatus.mutate({ id, status: 'CANCELLED' })}
+            onComplete={(id) => updateStatus.mutate({ id, status: 'ready' })}
+            onCancel={(id) => updateStatus.mutate({ id, status: 'cancelled' })}
           />
         ))}
         {/* Then Incoming */}
@@ -102,8 +100,8 @@ export default function KDSBoard() {
           <KDSCard
             key={order.id}
             order={order}
-            onComplete={(id) => updateStatus.mutate({ id, status: 'PREPARING' })}
-            onCancel={(id) => updateStatus.mutate({ id, status: 'CANCELLED' })}
+            onComplete={(id) => updateStatus.mutate({ id, status: 'preparing' })}
+            onCancel={(id) => updateStatus.mutate({ id, status: 'cancelled' })}
           />
         ))}
       </div>

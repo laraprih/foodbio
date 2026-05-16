@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { getPool } from '@/lib/db'
+import { serverEmit } from '@/lib/server-emit'
 
 export const dynamic = 'force-dynamic'
 
-const VALID_STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']
+const TRANSITIONS: Record<string, string[]> = {
+  pending:    ['confirmed', 'cancelled'],
+  confirmed:  ['preparing', 'cancelled'],
+  preparing:  ['ready', 'cancelled'],
+  ready:      ['dispatched', 'delivered'],
+  dispatched: ['delivered'],
+  delivered:  [],
+  cancelled:  [],
+}
 
 function getTenantId(session: any): string | null {
   const user = session?.user as any
-  if (!user || user.role !== 'admin' || !user.tenantId) return null
+  if (!user || !['admin', 'attendant'].includes(user.role) || !user.tenantId) return null
   return user.tenantId
 }
 
@@ -22,21 +31,45 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const status: string = body.status ?? 'cancelled'
+  const nextStatus: string = body.status
 
-  if (!VALID_STATUSES.includes(status)) {
+  if (!nextStatus || !(nextStatus in TRANSITIONS)) {
     return NextResponse.json({ error: 'Status inválido' }, { status: 400 })
   }
 
   const pool = getPool()
 
-  const { rowCount } = await pool.query(
-    `UPDATE "Order" SET status = $1, "updatedAt" = NOW()
-     WHERE id = $2 AND "tenantId" = $3`,
-    [status, id, tenantId]
+  const { rows } = await pool.query(
+    `SELECT status FROM "Order" WHERE id = $1 AND "tenantId" = $2`,
+    [id, tenantId]
+  )
+  if (!rows.length) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 })
+
+  const currentStatus: string = rows[0].status
+  const allowed = TRANSITIONS[currentStatus] ?? []
+
+  if (!allowed.includes(nextStatus)) {
+    return NextResponse.json(
+      { error: `Transição inválida: ${currentStatus} → ${nextStatus}` },
+      { status: 422 }
+    )
+  }
+
+  await pool.query(
+    `UPDATE "Order" SET status = $1, "updatedAt" = NOW() WHERE id = $2`,
+    [nextStatus, id]
   )
 
-  if (!rowCount) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 })
+  // Notifica cliente e salas internas em tempo real via Fastify Socket.IO
+  const rooms = [`order:${id}`, `admin:${tenantId}`]
+  if (['preparing', 'ready', 'dispatched', 'delivered'].includes(nextStatus)) {
+    rooms.push(`kitchen:${tenantId}`)
+  }
+  await serverEmit({
+    rooms,
+    event: 'order:update',
+    data: { orderId: id, status: nextStatus, updatedAt: new Date().toISOString() },
+  })
 
   return NextResponse.json({ ok: true })
 }

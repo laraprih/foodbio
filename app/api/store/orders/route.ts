@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPool } from '@/lib/db'
 import { randomUUID } from 'crypto'
+import { serverEmit } from '@/lib/server-emit'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +19,7 @@ async function generatePixQR(accessToken: string, orderId: string, amount: numbe
       transaction_amount: amount,
       payment_method_id: 'pix',
       external_reference: orderId,
-      payer: { email: payerEmail || 'cliente@foodin.com.br' },
+      payer: { email: payerEmail || 'cliente@foodbio.com.br' },
     }),
   })
   const body = await res.json()
@@ -117,6 +118,16 @@ export async function POST(req: NextRequest) {
     client.release()
   }
 
+  // Notifica cozinha e admin sobre novo pedido (pagamento pendente)
+  // Para pedidos em dinheiro/balcão o pedido já pode entrar direto na cozinha
+  if (paymentMethod !== 'pix') {
+    await serverEmit({
+      rooms: [`kitchen:${restaurantId}`, `admin:${restaurantId}`],
+      event: 'new_order',
+      data: { orderId, total, type: deliveryType, itemCount: itemDetails.length },
+    })
+  }
+
   // Generate PIX if needed
   if (paymentMethod === 'pix') {
     // Look up tenant MP access token, fall back to env var
@@ -132,7 +143,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const pix = await generatePixQR(accessToken, orderId, total, payerEmail || 'cliente@foodin.com.br')
+      const pix = await generatePixQR(accessToken, orderId, total, payerEmail || 'cliente@foodbio.com.br')
 
       const txId = randomUUID()
       const pixPayload = { qrCode: pix.qrCode, qrBase64: pix.qrBase64, expiresAt: pix.expiresAt }

@@ -51,7 +51,7 @@ function SuperAdminLoginForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Input label="E-mail" type="email" placeholder="master@foodin.com.br"
+        <Input label="E-mail" type="email" placeholder="master@foodbio.com.br"
           icon={<Mail className="w-4 h-4" />}
           error={errors.email?.message as string}
           {...register('email')} />
@@ -77,7 +77,7 @@ export default function SuperAdminLoginPage() {
           <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
             <ShieldCheck className="w-8 h-8 text-violet-600" />
           </div>
-          <h1 className="text-4xl font-black text-white mb-3 tracking-tight">Foodin</h1>
+          <h1 className="text-4xl font-black text-white mb-3 tracking-tight">Foodbio</h1>
           <p className="text-white/75 text-lg max-w-sm leading-relaxed">Master Admin — gerencie todas as empresas do ecossistema.</p>
           <div className="grid grid-cols-3 gap-4 mt-12">
             {[
@@ -99,7 +99,7 @@ export default function SuperAdminLoginPage() {
           <div className="w-9 h-9 bg-violet-600 rounded-xl flex items-center justify-center">
             <ShieldCheck className="w-5 h-5 text-white" />
           </div>
-          <span className="font-black text-gray-900 text-lg">Foodin <span className="text-violet-600 text-sm">master</span></span>
+          <span className="font-black text-gray-900 text-lg">Foodbio <span className="text-violet-600 text-sm">master</span></span>
         </div>
         <Suspense fallback={<div className="flex-1" />}>
           <SuperAdminLoginForm />

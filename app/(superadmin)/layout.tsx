@@ -51,7 +51,7 @@ function Logo({ small }: { small?: boolean }) {
       </div>
       {!small && (
         <div>
-          <p className="font-black text-gray-900 text-sm leading-tight">Foodin</p>
+          <p className="font-black text-gray-900 text-sm leading-tight">Foodbio</p>
           <p className="text-violet-600 text-[10px] font-bold uppercase tracking-wider leading-tight">Master Admin</p>
         </div>
       )}

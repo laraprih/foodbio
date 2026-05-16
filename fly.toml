@@ -1,4 +1,4 @@
-app = "foodin-api"
+app = "foodbio-api"
 primary_region = "gru"
 
 [http_service]

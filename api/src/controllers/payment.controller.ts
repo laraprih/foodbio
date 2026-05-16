@@ -85,7 +85,11 @@ export async function handleWebhookMP(request: FastifyRequest, reply: FastifyRep
   const requestId = (request.headers['x-request-id'] as string) ?? ''
   const rawBody = JSON.stringify(request.body)
 
-  if (!validateMP(signature, requestId, rawBody)) {
+  // Extract ts from x-signature header (format: "ts=<timestamp>,v1=<hash>")
+  const tsMatch = signature.match(/ts=(\d+)/)
+  const ts = tsMatch?.[1] ?? String(Date.now())
+
+  if (!validateMP(signature, requestId, ts, rawBody)) {
     return reply.status(401).send({ error: 'Assinatura inválida' })
   }
 

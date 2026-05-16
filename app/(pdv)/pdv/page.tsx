@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { get } from '@/lib/api-client';
-import { Search, Plus, ShoppingCart, User, X } from 'lucide-react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { get, post } from '@/lib/api-client';
+import { Search, ShoppingCart, X } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -14,11 +14,13 @@ export default function POSPage() {
   const { tenant } = useSessionStore();
   const [cart, setCart] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'pix'>('cash');
+  const [showPayment, setShowPayment] = useState(false);
 
   const { data: menu, isLoading } = useQuery({
-    queryKey: ['pos-menu', tenant?.slug],
-    queryFn: () => get<any>(`/bff/store/${tenant?.slug}/menu`),
-    enabled: !!tenant?.slug,
+    queryKey: ['pos-menu', tenant?.id],
+    queryFn: () => get<any>(`/api/admin/menu`),
+    enabled: !!tenant?.id,
   });
 
   const addToCart = (product: any) => {
@@ -39,6 +41,24 @@ export default function POSPage() {
   };
 
   const cartTotal = cart.reduce((acc, i) => acc + i.price * i.quantity, 0);
+
+  const finalizeMutation = useMutation({
+    mutationFn: () =>
+      post<{ orderId: string }>('/api/store/orders', {
+        restaurantId: tenant?.id,
+        items: cart.map((i) => ({ productId: i.id, quantity: i.quantity, options: [] })),
+        deliveryType: 'pickup',
+        customerName: 'Balcão',
+        customerPhone: '00000000000',
+        paymentMethod,
+      }),
+    onSuccess: () => {
+      toast.success('Pedido criado com sucesso!');
+      setCart([]);
+      setShowPayment(false);
+    },
+    onError: () => toast.error('Erro ao finalizar pedido'),
+  });
 
   if (isLoading) {
     return (
@@ -101,8 +121,9 @@ export default function POSPage() {
         </header>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {menu?.products
-            ?.filter((p: any) => p.name.toLowerCase().includes(search.toLowerCase()))
+          {(menu?.categories ?? [])
+            .flatMap((c: any) => c.products ?? [])
+            .filter((p: any) => p.available && p.name.toLowerCase().includes(search.toLowerCase()))
             .map((product: any) => (
               <div
                 key={product.id}
@@ -171,14 +192,52 @@ export default function POSPage() {
             <span className="text-gray-500 font-bold uppercase tracking-widest text-xs">Total a pagar</span>
             <span className="text-3xl font-black text-gray-900">R$ {cartTotal.toFixed(2)}</span>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Button variant="ghost" className="py-6 border-gray-200" onClick={() => setCart([])}>
-              Limpar
-            </Button>
-            <Button variant="dark" className="py-6" disabled={cart.length === 0}>
-              Finalizar
-            </Button>
-          </div>
+          {showPayment ? (
+            <div className="space-y-3">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Forma de pagamento</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setPaymentMethod('cash')}
+                  className={`py-3 rounded-2xl text-sm font-bold border-2 transition-all ${paymentMethod === 'cash' ? 'border-[var(--color-lime-primary)] bg-[var(--color-lime-primary)] text-white' : 'border-gray-200 text-gray-600'}`}
+                >
+                  Dinheiro
+                </button>
+                <button
+                  onClick={() => setPaymentMethod('pix')}
+                  className={`py-3 rounded-2xl text-sm font-bold border-2 transition-all ${paymentMethod === 'pix' ? 'border-[var(--color-lime-primary)] bg-[var(--color-lime-primary)] text-white' : 'border-gray-200 text-gray-600'}`}
+                >
+                  PIX
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="ghost" className="py-5" onClick={() => setShowPayment(false)}>
+                  Voltar
+                </Button>
+                <Button
+                  variant="dark"
+                  className="py-5"
+                  loading={finalizeMutation.isPending}
+                  onClick={() => finalizeMutation.mutate()}
+                >
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <Button variant="ghost" className="py-6 border-gray-200" onClick={() => setCart([])}>
+                Limpar
+              </Button>
+              <Button
+                variant="dark"
+                className="py-6"
+                disabled={cart.length === 0}
+                onClick={() => setShowPayment(true)}
+              >
+                Finalizar
+              </Button>
+            </div>
+          )}
         </div>
       </aside>
     </div>

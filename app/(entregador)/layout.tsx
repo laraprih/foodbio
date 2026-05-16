@@ -19,7 +19,7 @@ export default function EntregadorLayout({ children }: { children: React.ReactNo
               <Bike className="w-4 h-4 text-white" />
             </div>
             <div>
-              <span className="font-black text-white text-sm tracking-tight">Foodin</span>
+              <span className="font-black text-white text-sm tracking-tight">Foodbio</span>
               <span className="text-[var(--color-lime-primary)] text-[10px] ml-1 font-bold">entregador</span>
             </div>
           </div>

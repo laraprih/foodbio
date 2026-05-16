@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Utensils, ShoppingBag, DollarSign,
   Settings, LogOut, Menu, X, ChevronRight,
@@ -8,7 +8,10 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
+import useSessionStore from '@/store/session-store';
+import { get } from '@/lib/api-client';
+import type { TenantInfo } from '@/types';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard',     href: '/dashboard' },
@@ -47,6 +50,18 @@ function NavItem({ item, active, collapsed, onClick }: { item: typeof menuItems[
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data: session } = useSession();
+  const setTenant = useSessionStore((s) => s.setTenant);
+
+  useEffect(() => {
+    if ((session?.user as any)?.tenantId) {
+      get<TenantInfo & Record<string, unknown>>('/api/admin/tenant').then((res) => {
+        if (res && !('error' in res)) {
+          setTenant({ id: res.id, slug: res.slug, name: res.name, gateway: res.gateway as TenantInfo['gateway'] });
+        }
+      });
+    }
+  }, [(session?.user as any)?.tenantId, setTenant]);
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -66,7 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="w-8 h-8 bg-[var(--color-lime-primary)] rounded-xl flex items-center justify-center">
               <span className="text-white font-black text-sm">F</span>
             </div>
-            <span className="font-black text-gray-900 text-base tracking-tight">Foodin<span className="text-[var(--color-lime-primary)] text-xs ml-0.5">admin</span></span>
+            <span className="font-black text-gray-900 text-base tracking-tight">Foodbio<span className="text-[var(--color-lime-primary)] text-xs ml-0.5">admin</span></span>
           </div>
           <button onClick={() => setDrawerOpen(false)} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
             <X className="w-4 h-4" />
@@ -116,7 +131,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="w-8 h-8 bg-[var(--color-lime-primary)] rounded-xl flex items-center justify-center shrink-0">
             <span className="text-white font-black text-sm">F</span>
           </div>
-          <span className="font-black text-gray-900 text-base tracking-tight">Foodin<span className="text-[var(--color-lime-primary)] text-xs ml-0.5">admin</span></span>
+          <span className="font-black text-gray-900 text-base tracking-tight">Foodbio<span className="text-[var(--color-lime-primary)] text-xs ml-0.5">admin</span></span>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => (
@@ -147,7 +162,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="w-7 h-7 bg-[var(--color-lime-primary)] rounded-lg flex items-center justify-center">
               <span className="text-white font-black text-xs">F</span>
             </div>
-            <span className="font-black text-gray-900 text-sm tracking-tight">Foodin<span className="text-[var(--color-lime-primary)] text-[10px] ml-0.5">admin</span></span>
+            <span className="font-black text-gray-900 text-sm tracking-tight">Foodbio<span className="text-[var(--color-lime-primary)] text-[10px] ml-0.5">admin</span></span>
           </div>
         </div>
         <main className="flex-1 overflow-y-auto">{children}</main>

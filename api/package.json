@@ -1,5 +1,5 @@
 {
-  "name": "foodin-bff",
+  "name": "foodbio-bff",
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
