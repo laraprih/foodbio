@@ -33,10 +33,10 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
   if (typeof document === 'undefined') return null;
 
   const sizeClasses = {
-    sm: 'sm:max-w-sm',
-    md: 'sm:max-w-md',
-    lg: 'sm:max-w-lg',
-    xl: 'sm:max-w-2xl',
+    sm:  'sm:max-w-sm',
+    md:  'sm:max-w-md',
+    lg:  'sm:max-w-lg',
+    xl:  'sm:max-w-2xl',
     '2xl': 'sm:max-w-3xl',
   };
 
@@ -57,20 +57,24 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className={cn(
-              'relative bg-white rounded-t-[40px] sm:rounded-[28px] w-full p-6 shadow-xl z-50 overflow-hidden',
+              'relative bg-white rounded-t-[32px] sm:rounded-[24px] w-full shadow-xl z-50',
+              'flex flex-col max-h-[92dvh]',
               sizeClasses[size]
             )}
           >
-            <div className="flex items-center justify-between mb-4">
-              {title && <h2 className="text-lg font-bold text-zinc-900">{title}</h2>}
+            {/* Close button — sempre visível, fora da área rolável */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-0 shrink-0">
+              {title && <h2 className="text-base font-bold text-zinc-900">{title}</h2>}
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors ml-auto"
+                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors ml-auto"
               >
-                <X className="w-5 h-5 text-zinc-500" />
+                <X className="w-4 h-4 text-zinc-500" />
               </button>
             </div>
-            <div className="max-h-[80dvh] overflow-y-auto">
+
+            {/* Conteúdo — children controlam o próprio layout */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5 pt-3">
               {children}
             </div>
           </motion.div>
