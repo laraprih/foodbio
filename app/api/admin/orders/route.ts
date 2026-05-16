@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 function getTenantId(session: any): string | null {
   const user = session?.user as any
-  if (!user || user.role !== 'admin' || !user.tenantId) return null
+  if (!user || !['admin', 'attendant', 'cook'].includes(user.role) || !user.tenantId) return null
   return user.tenantId
 }
 

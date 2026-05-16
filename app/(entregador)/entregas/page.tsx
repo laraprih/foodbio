@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { get, patch, isApiError } from '@/lib/api-client';
 import { toast } from 'react-hot-toast';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -11,6 +12,8 @@ import { Package, CheckCircle2 } from 'lucide-react';
 
 export default function EntregasPage() {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const tenantId = (session?.user as any)?.tenantId;
 
   const { data: deliveries, isLoading } = useQuery({
     queryKey: ['my-deliveries'],
@@ -18,8 +21,9 @@ export default function EntregasPage() {
     refetchInterval: 20000,
   });
 
-  useSocket('drivers', {
+  useSocket(tenantId ? `drivers:${tenantId}` : undefined, {
     new_delivery: () => queryClient.invalidateQueries({ queryKey: ['my-deliveries'] }),
+    'order:update': () => queryClient.invalidateQueries({ queryKey: ['my-deliveries'] }),
   });
 
   const pickUp = useMutation({

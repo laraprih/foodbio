@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { getPool } from '@/lib/db'
+import { serverEmit } from '@/lib/server-emit'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,13 +35,17 @@ export async function PATCH(
   const driverId = driverRes.rows[0].id
 
   const deliveryRes = await pool.query(
-    `SELECT id, status, "orderId" FROM "Delivery" WHERE id = $1 AND "driverId" = $2`,
+    `SELECT d.id, d.status, d."orderId", o."tenantId"
+     FROM "Delivery" d
+     JOIN "Order" o ON o.id = d."orderId"
+     WHERE d.id = $1 AND d."driverId" = $2`,
     [id, driverId]
   )
   if (!deliveryRes.rows.length) {
     return NextResponse.json({ error: 'Entrega não encontrada' }, { status: 404 })
   }
   const delivery = deliveryRes.rows[0]
+  const { orderId, tenantId } = delivery
 
   if (action === 'pickup') {
     if (delivery.status !== 'assigned') {
@@ -50,6 +55,11 @@ export async function PATCH(
       `UPDATE "Delivery" SET status = 'picked_up', "pickupTime" = NOW() WHERE id = $1`,
       [id]
     )
+    await serverEmit({
+      rooms: [`order:${orderId}`, `admin:${tenantId}`],
+      event: 'order:update',
+      data: { orderId, status: 'dispatched', updatedAt: new Date().toISOString() },
+    })
   } else {
     if (delivery.status !== 'picked_up') {
       return NextResponse.json({ error: 'Pedido ainda não foi coletado' }, { status: 400 })
@@ -60,8 +70,13 @@ export async function PATCH(
     )
     await pool.query(
       `UPDATE "Order" SET status = 'delivered', "updatedAt" = NOW() WHERE id = $1`,
-      [delivery.orderId]
+      [orderId]
     )
+    await serverEmit({
+      rooms: [`order:${orderId}`, `admin:${tenantId}`],
+      event: 'order:update',
+      data: { orderId, status: 'delivered', updatedAt: new Date().toISOString() },
+    })
   }
 
   return NextResponse.json({ ok: true })

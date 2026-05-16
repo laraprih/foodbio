@@ -10,6 +10,7 @@ import { useSocket } from '@/hooks/use-socket'
 import { Clock, ChevronRight } from 'lucide-react'
 import OrderDetailModal from '@/components/admin/OrderDetailModal'
 import { formatCurrency } from '@/lib/utils'
+import useSessionStore from '@/store/session-store'
 
 const STATUS_TABS = [
   { id: 'all', label: 'Todos' },
@@ -43,6 +44,7 @@ export default function PedidosPage() {
   const [activeTab, setActiveTab] = useState('all')
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null)
   const queryClient = useQueryClient()
+  const { tenant } = useSessionStore()
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders-full'],
@@ -50,8 +52,9 @@ export default function PedidosPage() {
     refetchInterval: 15000,
   })
 
-  useSocket('admin', {
+  useSocket(tenant?.id ? `admin:${tenant.id}` : undefined, {
     new_order: () => queryClient.invalidateQueries({ queryKey: ['admin-orders-full'] }),
+    'order:update': () => queryClient.invalidateQueries({ queryKey: ['admin-orders-full'] }),
   })
 
   const updateStatus = useMutation({

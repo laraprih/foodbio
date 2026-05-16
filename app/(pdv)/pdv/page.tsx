@@ -2,25 +2,25 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { get, post } from '@/lib/api-client';
 import { Search, ShoppingCart, X } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from 'react-hot-toast';
-import useSessionStore from '@/store/session-store';
 
 export default function POSPage() {
-  const { tenant } = useSessionStore();
+  const { data: session } = useSession();
+  const tenantId = (session?.user as any)?.tenantId;
   const [cart, setCart] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'pix'>('cash');
   const [showPayment, setShowPayment] = useState(false);
 
   const { data: menu, isLoading } = useQuery({
-    queryKey: ['pos-menu', tenant?.id],
+    queryKey: ['pos-menu'],
     queryFn: () => get<any>(`/api/admin/menu`),
-    enabled: !!tenant?.id,
   });
 
   const addToCart = (product: any) => {
@@ -45,7 +45,7 @@ export default function POSPage() {
   const finalizeMutation = useMutation({
     mutationFn: () =>
       post<{ orderId: string }>('/api/store/orders', {
-        restaurantId: tenant?.id,
+        restaurantId: tenantId,
         items: cart.map((i) => ({ productId: i.id, quantity: i.quantity, options: [] })),
         deliveryType: 'pickup',
         customerName: 'Balcão',

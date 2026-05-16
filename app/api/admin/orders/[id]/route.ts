@@ -17,7 +17,7 @@ const TRANSITIONS: Record<string, string[]> = {
 
 function getTenantId(session: any): string | null {
   const user = session?.user as any
-  if (!user || !['admin', 'attendant'].includes(user.role) || !user.tenantId) return null
+  if (!user || !['admin', 'attendant', 'cook'].includes(user.role) || !user.tenantId) return null
   return user.tenantId
 }
 
@@ -70,6 +70,15 @@ export async function PATCH(
     event: 'order:update',
     data: { orderId: id, status: nextStatus, updatedAt: new Date().toISOString() },
   })
+
+  // Notifica entregadores quando pedido é despachado
+  if (nextStatus === 'dispatched') {
+    await serverEmit({
+      rooms: [`drivers:${tenantId}`],
+      event: 'new_delivery',
+      data: { orderId: id },
+    })
+  }
 
   return NextResponse.json({ ok: true })
 }

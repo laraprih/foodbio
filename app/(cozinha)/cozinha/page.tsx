@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { get, patch } from '@/lib/api-client';
 import KDSCard from '@/components/kitchen/KDSCard';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -10,7 +11,16 @@ import { useSocket } from '@/hooks/use-socket';
 
 export default function KDSBoard() {
   const queryClient = useQueryClient();
-  const { connected } = useSocket('kds');
+  const { data: session } = useSession();
+  const tenantId = (session?.user as any)?.tenantId;
+
+  const { connected } = useSocket(
+    tenantId ? `kitchen:${tenantId}` : undefined,
+    {
+      new_order: () => queryClient.invalidateQueries({ queryKey: ['kds-orders'] }),
+      'order:update': () => queryClient.invalidateQueries({ queryKey: ['kds-orders'] }),
+    }
+  );
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['kds-orders'],
