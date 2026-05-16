@@ -39,7 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             const { rows } = await pool.query(
               'SELECT id, name, email, phone, "passwordHash", role, "tenantId" FROM "User" WHERE email = $1 AND "tenantId" = $2 AND role = \'customer\' AND active = true',
-              [credentials.email, tenant.id]
+              [String(credentials.email).toLowerCase().trim(), tenant.id]
             )
             const user = rows[0]
             if (!user || !user.passwordHash) return null

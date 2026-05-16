@@ -75,10 +75,15 @@ export default function ContaPage() {
   const user = session?.user as any
   const isCustomer = user?.role === 'customer'
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isError } = useQuery({
     queryKey: ['customer-profile'],
-    queryFn: () => fetch('/api/store/customer/profile').then(r => r.json()),
+    queryFn: async () => {
+      const r = await fetch('/api/store/customer/profile')
+      if (!r.ok) throw new Error(`API ${r.status}`)
+      return r.json()
+    },
     enabled: !!session && isCustomer,
+    retry: 1,
   })
 
   // ── loading / auth guard ──
@@ -91,6 +96,7 @@ export default function ContaPage() {
   }
 
   if (!session || !isCustomer) {
+    const loginUrl = `/${slug}/login?callbackUrl=/${slug}/conta`
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="w-20 h-20 bg-[var(--color-lime-primary)]/10 rounded-full flex items-center justify-center mb-5">
@@ -98,7 +104,7 @@ export default function ContaPage() {
         </div>
         <h2 className="text-2xl font-black text-gray-900 mb-2">Olá, visitante!</h2>
         <p className="text-gray-400 text-sm mb-8 max-w-xs">Entre na sua conta para ver seus pedidos, endereços e histórico de compras.</p>
-        <Link href={`/${slug}/login`} className="w-full max-w-xs py-3.5 bg-[var(--color-lime-primary)] text-white font-bold rounded-2xl text-center block hover:brightness-95 transition-all shadow-lg shadow-[var(--color-lime-primary)]/20">
+        <Link href={loginUrl} className="w-full max-w-xs py-3.5 bg-[var(--color-lime-primary)] text-white font-bold rounded-2xl text-center block hover:brightness-95 transition-all shadow-lg shadow-[var(--color-lime-primary)]/20">
           Entrar na conta
         </Link>
         <Link href={`/${slug}/cadastro`} className="mt-3 w-full max-w-xs py-3.5 bg-white text-gray-700 font-bold rounded-2xl text-center block border border-gray-200 hover:bg-gray-50 transition-all">
@@ -107,6 +113,17 @@ export default function ContaPage() {
         <Link href={`/${slug}`} className="mt-5 text-sm text-gray-400 hover:text-gray-600">
           Continuar sem entrar
         </Link>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
+        <p className="text-red-500 font-bold mb-4">Erro ao carregar dados da conta</p>
+        <button onClick={() => window.location.reload()} className="px-6 py-2.5 bg-[var(--color-lime-primary)] text-white font-bold rounded-xl">
+          Tentar novamente
+        </button>
       </div>
     )
   }

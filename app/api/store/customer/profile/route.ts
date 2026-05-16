@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { getPool } from '@/lib/db'
+import { randomUUID } from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +32,7 @@ export async function GET() {
     [u.id]
   )
   if (!custRows.length) {
-    const newId = require('crypto').randomUUID()
+    const newId = randomUUID()
     await pool.query(
       `INSERT INTO "Customer" (id, "userId", addresses) VALUES ($1, $2, '[]'::jsonb)
        ON CONFLICT ("userId") DO NOTHING`,

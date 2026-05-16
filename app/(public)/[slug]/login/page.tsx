@@ -1,13 +1,15 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { ArrowLeft, LogIn, Eye, EyeOff } from 'lucide-react'
 
 export default function CustomerLoginPage() {
   const { slug } = useParams<{ slug: string }>()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') ?? `/${slug}`
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
@@ -30,7 +32,7 @@ export default function CustomerLoginPage() {
       if (res?.error) {
         setError('E-mail ou senha incorretos')
       } else {
-        window.location.href = `/${slug}`
+        window.location.href = callbackUrl
       }
     } catch {
       setError('Erro ao conectar. Tente novamente.')
