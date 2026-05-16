@@ -20,7 +20,7 @@ export async function GET() {
   const pool = getPool()
 
   const { rows: userRows } = await pool.query(
-    `SELECT id, name, email, phone, "avatarUrl", "createdAt" FROM "User" WHERE id = $1`,
+    `SELECT id, name, email, phone, "createdAt" FROM "User" WHERE id = $1`,
     [u.id]
   )
   if (!userRows.length) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
