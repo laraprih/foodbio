@@ -85,19 +85,25 @@ export async function POST(req: NextRequest) {
 
   // Create order + items in a transaction
   const client = await pool.connect()
+  // Pedidos em dinheiro são pagos na hora — entram direto como confirmados
+  const isCash = paymentMethod === 'cash'
+  const initialStatus = isCash ? 'confirmed' : 'pending'
+  const initialPaymentStatus = isCash ? 'approved' : 'pending'
+
   try {
     await client.query('BEGIN')
 
     await client.query(
       `INSERT INTO "Order" (id, "tenantId", type, status, total, subtotal, "deliveryFee",
        "paymentStatus", "paymentMethod", "deliveryAddress", "customerName", "customerPhone", "createdAt", "updatedAt")
-       VALUES ($1,$2,$3,'pending',$4,$5,$6,'pending',$7,$8,$9,$10,NOW(),NOW())`,
+       VALUES ($1,$2,$3,$11,$4,$5,$6,$12,$7,$8,$9,$10,NOW(),NOW())`,
       [
         orderId, restaurantId,
         deliveryType === 'delivery' ? 'delivery' : 'pickup',
         total, subtotal, fee, paymentMethod,
         address ? JSON.stringify(address) : null,
         customerName, customerPhone,
+        initialStatus, initialPaymentStatus,
       ]
     )
 
@@ -118,13 +124,12 @@ export async function POST(req: NextRequest) {
     client.release()
   }
 
-  // Notifica cozinha e admin sobre novo pedido (pagamento pendente)
-  // Para pedidos em dinheiro/balcão o pedido já pode entrar direto na cozinha
+  // Notifica cozinha e admin em tempo real
   if (paymentMethod !== 'pix') {
     await serverEmit({
       rooms: [`kitchen:${restaurantId}`, `admin:${restaurantId}`],
       event: 'new_order',
-      data: { orderId, total, type: deliveryType, itemCount: itemDetails.length },
+      data: { orderId, total, type: deliveryType, itemCount: itemDetails.length, status: initialStatus },
     })
   }
 

@@ -3,8 +3,18 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import FacebookProvider from 'next-auth/providers/facebook'
 import type { JWT } from 'next-auth/jwt'
 import { getPool } from '@/lib/db'
+import { SignJWT } from 'jose'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+
+async function mintFastifyToken(user: { id: string; role: string; tenantId?: string | null }): Promise<string> {
+  const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? 'foodin-super-secret-key-2026')
+  return new SignJWT({ id: user.id, role: user.role, tenantId: user.tenantId ?? null })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('30d')
+    .sign(secret)
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -38,7 +48,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             const valid = await argon2.verify(user.passwordHash, credentials.password as string)
             if (!valid) return null
 
-            return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, tenantId: user.tenantId, accessToken: undefined }
+            const accessToken = await mintFastifyToken(user)
+            return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, tenantId: user.tenantId, accessToken }
           }
 
           // Admin / superadmin login: global email lookup
@@ -53,7 +64,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const valid = await argon2.verify(user.passwordHash, credentials.password as string)
           if (!valid) return null
 
-          return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, tenantId: user.tenantId, accessToken: undefined }
+          const accessToken = await mintFastifyToken(user)
+          return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, tenantId: user.tenantId, accessToken }
         } catch {
           if (credentials.slug) return null // never fall back to Fastify for customer login
           const res = await fetch(`${API_URL}/api/auth/login`, {
