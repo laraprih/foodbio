@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { getPool } from '@/lib/db'
 
@@ -10,10 +10,18 @@ function getTenantId(session: any): string | null {
   return user.tenantId
 }
 
-export async function GET() {
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+export async function GET(req: NextRequest) {
   const session = await auth()
   const tenantId = getTenantId(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const { searchParams } = req.nextUrl
+  const from = searchParams.get('from') ?? todayISO()
+  const to   = searchParams.get('to')   ?? todayISO()
 
   const pool = getPool()
 
@@ -23,9 +31,11 @@ export async function GET() {
             o."deliveryAddress", o."externalReference", o."createdAt", o."updatedAt"
      FROM "Order" o
      WHERE o."tenantId" = $1
+       AND o."createdAt" >= ($2::date)
+       AND o."createdAt" <  ($3::date + interval '1 day')
      ORDER BY o."createdAt" DESC
-     LIMIT 200`,
-    [tenantId]
+     LIMIT 500`,
+    [tenantId, from, to]
   )
 
   const orderIds = orders.map((o) => o.id)
