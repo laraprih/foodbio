@@ -25,11 +25,24 @@ export async function GET() {
   if (!userRows.length) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
   const user = userRows[0]
 
-  // Busca Customer (addresses + orders)
-  const { rows: custRows } = await pool.query(
+  // Busca ou cria Customer (addresses + orders)
+  let { rows: custRows } = await pool.query(
     `SELECT id, addresses FROM "Customer" WHERE "userId" = $1`,
     [u.id]
   )
+  if (!custRows.length) {
+    const newId = require('crypto').randomUUID()
+    await pool.query(
+      `INSERT INTO "Customer" (id, "userId", addresses) VALUES ($1, $2, '[]'::jsonb)
+       ON CONFLICT ("userId") DO NOTHING`,
+      [newId, u.id]
+    )
+    const refetch = await pool.query(
+      `SELECT id, addresses FROM "Customer" WHERE "userId" = $1`,
+      [u.id]
+    )
+    custRows = refetch.rows
+  }
   const customer = custRows[0]
   const addresses = customer?.addresses ?? []
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPool } from '@/lib/db'
 import { randomUUID } from 'crypto'
 import { serverEmit } from '@/lib/server-emit'
+import { auth } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,6 +38,8 @@ async function generatePixQR(accessToken: string, orderId: string, amount: numbe
 
 export async function POST(req: NextRequest) {
   const pool = getPool()
+  const session = await auth()
+  const sessionUser = session?.user as any
 
   let body: any
   try {
@@ -83,6 +86,16 @@ export async function POST(req: NextRequest) {
   const total = subtotal + fee
   const orderId = randomUUID()
 
+  // Resolve customerId if user is logged in as customer
+  let customerId: string | null = null
+  if (sessionUser?.role === 'customer' && sessionUser?.id) {
+    const custRes = await pool.query(
+      `SELECT id FROM "Customer" WHERE "userId" = $1`,
+      [sessionUser.id]
+    )
+    customerId = custRes.rows[0]?.id ?? null
+  }
+
   // Create order + items in a transaction
   const client = await pool.connect()
   // Pedidos em dinheiro são pagos na hora — entram direto como confirmados
@@ -95,8 +108,9 @@ export async function POST(req: NextRequest) {
 
     await client.query(
       `INSERT INTO "Order" (id, "tenantId", type, status, total, subtotal, "deliveryFee",
-       "paymentStatus", "paymentMethod", "deliveryAddress", "customerName", "customerPhone", "createdAt", "updatedAt")
-       VALUES ($1,$2,$3,$11,$4,$5,$6,$12,$7,$8,$9,$10,NOW(),NOW())`,
+       "paymentStatus", "paymentMethod", "deliveryAddress", "customerName", "customerPhone",
+       "customerId", "createdAt", "updatedAt")
+       VALUES ($1,$2,$3,$11,$4,$5,$6,$12,$7,$8,$9,$10,$13,NOW(),NOW())`,
       [
         orderId, restaurantId,
         deliveryType === 'delivery' ? 'delivery' : 'pickup',
@@ -104,6 +118,7 @@ export async function POST(req: NextRequest) {
         address ? JSON.stringify(address) : null,
         customerName, customerPhone,
         initialStatus, initialPaymentStatus,
+        customerId,
       ]
     )
 

@@ -36,10 +36,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
 
   const id = crypto.randomUUID()
+  const customerId = crypto.randomUUID()
+
   await pool.query(
     `INSERT INTO "User" (id, "tenantId", name, email, phone, "passwordHash", role, active, "createdAt")
      VALUES ($1, $2, $3, $4, $5, $6, 'customer', true, NOW())`,
     [id, tenant.id, name.trim(), email.toLowerCase().trim(), phone?.trim() ?? null, passwordHash]
+  )
+
+  await pool.query(
+    `INSERT INTO "Customer" (id, "userId", addresses) VALUES ($1, $2, '[]'::jsonb)`,
+    [customerId, id]
   )
 
   return NextResponse.json({ ok: true }, { status: 201 })
