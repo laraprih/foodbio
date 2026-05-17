@@ -31,7 +31,7 @@ function CozinhaLoginForm() {
       }
       const session = await getSession();
       const role = (session?.user as any)?.role;
-      if (role !== 'cook' && role !== 'admin') {
+      if (role !== 'cook') {
         toast.error('Acesso restrito à equipe de cozinha.');
         return;
       }

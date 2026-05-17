@@ -348,7 +348,7 @@ export default function KDSBoard() {
     }
     if (status === 'authenticated') {
       const role = (session?.user as any)?.role
-      if (role !== 'cook' && role !== 'admin') {
+      if (role !== 'cook') {
         router.replace(`/${slug}/cozinha/login`)
       }
     }

@@ -31,7 +31,7 @@ function PDVLoginForm() {
       }
       const session = await getSession();
       const role = (session?.user as any)?.role;
-      if (role !== 'attendant' && role !== 'admin') {
+      if (role !== 'attendant') {
         toast.error('Acesso restrito à equipe de atendimento.');
         return;
       }

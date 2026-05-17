@@ -69,7 +69,7 @@ export default function POSPage() {
     }
     if (status === 'authenticated') {
       const role = (session?.user as any)?.role;
-      if (role !== 'attendant' && role !== 'admin') {
+      if (role !== 'attendant') {
         router.replace(`/${slug}/pdv/login`);
       }
     }
