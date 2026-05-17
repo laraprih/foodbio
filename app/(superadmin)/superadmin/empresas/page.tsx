@@ -121,7 +121,15 @@ function TenantModal({ tenant, onClose, onSaved }: ModalProps) {
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Dados da Empresa</p>
             <div className="space-y-3">
               <Field label="Nome da empresa *" value={form.name} onChange={set('name')} placeholder="Ex: Pizzaria do João" required />
-              <Field label="Slug (URL) *" value={form.slug} onChange={set('slug')} placeholder="pizzaria-do-joao" required disabled={isEdit} hint={`Acesso: /${form.slug}`} />
+              <Field label="Slug (URL) *" value={form.slug} onChange={set('slug')} placeholder="pizzaria-do-joao" required hint={`Acesso: /${form.slug}`} />
+              {isEdit && form.slug !== (tenant?.slug ?? '') && (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-800">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-500" />
+                  <span>
+                    <strong>Atenção:</strong> alterar o slug muda a URL pública da loja de <code className="font-mono bg-amber-100 px-1 rounded">/{tenant?.slug}</code> para <code className="font-mono bg-amber-100 px-1 rounded">/{form.slug}</code>. Links e bookmarks antigos deixarão de funcionar.
+                  </span>
+                </div>
+              )}
               <Field label="Telefone" value={form.phone} onChange={set('phone')} placeholder="(11) 99999-9999" />
               <Field label="Endereço" value={form.address} onChange={set('address')} placeholder="Rua das Flores, 123" />
               <div className="grid grid-cols-2 gap-3">
