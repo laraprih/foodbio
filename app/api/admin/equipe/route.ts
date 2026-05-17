@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { handlers } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { getPool } from '@/lib/db'
 import argon2 from 'argon2'
 
 const STAFF_ROLES = ['cook', 'attendant', 'driver']
 
-async function getSession(req: NextRequest) {
-  return getServerSession({ req } as any)
-}
-
-export async function GET(req: NextRequest) {
-  const session = await getSession(req)
+export async function GET() {
+  const session = await auth()
   const tenantId = (session?.user as any)?.tenantId
   if (!tenantId || (session?.user as any)?.role !== 'admin') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -29,7 +24,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSession(req)
+  const session = await auth()
   const tenantId = (session?.user as any)?.tenantId
   if (!tenantId || (session?.user as any)?.role !== 'admin') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -57,7 +52,6 @@ export async function POST(req: NextRequest) {
     [tenantId, name.trim(), email.toLowerCase().trim(), passwordHash, role]
   )
 
-  // Criar registro Driver se for entregador
   if (role === 'driver') {
     await pool.query(
       `INSERT INTO "Driver" (id, "userId", "tenantId", vehicle, plate, active)
