@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import { useSectionAuth } from '@/hooks/use-section-auth';
 import { get, patch, isApiError } from '@/lib/api-client';
 import { toast } from 'react-hot-toast';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -17,21 +17,14 @@ export default function EntregasPage() {
   const slug = params.slug as string;
 
   const queryClient = useQueryClient();
-  const { data: session, status } = useSession();
-  const tenantId = (session?.user as any)?.tenantId;
+  const { user, status } = useSectionAuth('entregador');
+  const tenantId = user?.tenantId;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace(`/${slug}/entregador/login?callbackUrl=/${slug}/entregas`);
-      return;
     }
-    if (status === 'authenticated') {
-      const role = (session?.user as any)?.role;
-      if (role !== 'driver' && role !== 'admin') {
-        router.replace(`/${slug}/entregador/login`);
-      }
-    }
-  }, [status, session, slug, router]);
+  }, [status, slug, router]);
 
   const { data: deliveries, isLoading } = useQuery({
     queryKey: ['my-deliveries'],
@@ -58,7 +51,7 @@ export default function EntregasPage() {
     onError: () => toast.error('Erro ao confirmar entrega'),
   });
 
-  if (status === 'loading' || status === 'unauthenticated') {
+  if (status === 'loading' || status === 'unauthenticated' || user?.role !== 'driver') {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"

@@ -4,7 +4,6 @@ import React, { Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '@/lib/validations';
-import { signIn, getSession } from 'next-auth/react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Input } from '@/components/ui/Input';
@@ -24,15 +23,14 @@ function PDVLoginForm() {
 
   const onSubmit = async (data: any) => {
     try {
-      const result = await signIn('credentials', { redirect: false, email: data.email, password: data.password });
-      if (result?.error) {
-        toast.error('Credenciais inválidas.');
-        return;
-      }
-      const session = await getSession();
-      const role = (session?.user as any)?.role;
-      if (role !== 'attendant') {
-        toast.error('Acesso restrito à equipe de atendimento.');
+      const res = await fetch('/api/auth/section', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email, password: data.password, section: 'pdv', slug }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error(body.error ?? 'Credenciais inválidas.');
         return;
       }
       router.push(callbackUrl);

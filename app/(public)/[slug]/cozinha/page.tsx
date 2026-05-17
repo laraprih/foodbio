@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useSession } from 'next-auth/react'
+import { useSectionAuth } from '@/hooks/use-section-auth'
 import { get, patch } from '@/lib/api-client'
 import { useSocket } from '@/hooks/use-socket'
 import { cn } from '@/lib/utils'
@@ -333,10 +333,10 @@ export default function KDSBoard() {
   const slug = params.slug as string
 
   const queryClient = useQueryClient()
-  const { data: session, status } = useSession()
+  const { user, status } = useSectionAuth('cozinha')
   const now        = useNow()
-  const tenantId   = (session?.user as any)?.tenantId
-  const tenantName = (session?.user as any)?.tenantName
+  const tenantId   = user?.tenantId
+  const tenantName = user?.tenantName
 
   // Mobile: active tab
   const [activeTab, setActiveTab] = useState(0)
@@ -344,15 +344,8 @@ export default function KDSBoard() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace(`/${slug}/cozinha/login?callbackUrl=/${slug}/cozinha`)
-      return
     }
-    if (status === 'authenticated') {
-      const role = (session?.user as any)?.role
-      if (role !== 'cook') {
-        router.replace(`/${slug}/cozinha/login`)
-      }
-    }
-  }, [status, session, slug, router])
+  }, [status, slug, router])
 
   const { connected } = useSocket(
     tenantId ? `kitchen:${tenantId}` : undefined,
@@ -396,8 +389,7 @@ export default function KDSBoard() {
     )
   }
 
-  const role = (session?.user as any)?.role
-  if (role !== 'cook') {
+  if (user?.role !== 'cook') {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin"

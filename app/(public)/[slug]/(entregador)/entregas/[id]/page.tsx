@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import { useSectionAuth } from '@/hooks/use-section-auth';
 import { get, patch, isApiError } from '@/lib/api-client';
 import { toast } from 'react-hot-toast';
 import { ArrowLeft, Navigation, Phone, CheckCircle, Package } from 'lucide-react';
@@ -33,26 +33,19 @@ export default function EntregaDetailPage() {
   const slug = params.slug as string;
   const id = params.id as string;
 
-  const { data: session, status } = useSession();
+  const { user, status } = useSectionAuth('entregador');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace(`/${slug}/entregador/login?callbackUrl=/${slug}/entregas/${id}`);
-      return;
     }
-    if (status === 'authenticated') {
-      const role = (session?.user as any)?.role;
-      if (role !== 'driver' && role !== 'admin') {
-        router.replace(`/${slug}/entregador/login`);
-      }
-    }
-  }, [status, session, slug, id, router]);
+  }, [status, slug, id, router]);
 
   const { data: delivery, isLoading } = useQuery({
     queryKey: ['delivery', id],
     queryFn: () => get<DeliveryDetail>(`/bff/api/delivery/${id}`),
     refetchInterval: 20000,
-    enabled: status === 'authenticated',
+    enabled: status === 'authenticated' && user?.role === 'driver',
   });
 
   const pickUp = useMutation({
@@ -71,7 +64,7 @@ export default function EntregaDetailPage() {
     onError: () => toast.error('Erro ao confirmar entrega'),
   });
 
-  if (status === 'loading' || status === 'unauthenticated') {
+  if (status === 'loading' || status === 'unauthenticated' || user?.role !== 'driver') {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Spinner size="lg" className="text-[var(--color-lime-primary)]" />

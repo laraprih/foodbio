@@ -16,6 +16,20 @@ const SECTION_LOGIN: Record<string, string> = {
   entregas:      'entregador/login',
 }
 
+// Cookie de sessão por seção (PDV/cozinha/entregador usam cookies próprios)
+const SECTION_COOKIE: Record<string, string> = {
+  dashboard:     'authjs.session-token',
+  pedidos:       'authjs.session-token',
+  cardapio:      'authjs.session-token',
+  financeiro:    'authjs.session-token',
+  configuracoes: 'authjs.session-token',
+  relatorios:    'authjs.session-token',
+  equipe:        'authjs.session-token',
+  cozinha:       'cozinha_session',
+  pdv:           'pdv_session',
+  entregas:      'entregador_session',
+}
+
 const ALL_SECTIONS = Object.keys(SECTION_LOGIN)
 
 // Regex: /{slug}/{seção}(/{qualquer coisa})?
@@ -31,13 +45,13 @@ const RESERVED_SLUGS = new Set([
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  const sessionToken =
+  const adminToken =
     req.cookies.get('authjs.session-token')?.value ??
     req.cookies.get('__Secure-authjs.session-token')?.value
 
   // ── Superadmin ──────────────────────────────────────────────────────────────
   if (SUPERADMIN_ROUTES.some(r => pathname.startsWith(r))) {
-    if (!sessionToken) {
+    if (!adminToken) {
       const url = new URL('/superadmin/login', req.url)
       url.searchParams.set('callbackUrl', pathname)
       return NextResponse.redirect(url)
@@ -57,7 +71,13 @@ export function middleware(req: NextRequest) {
     const loginSuffix = SECTION_LOGIN[section]
     if (pathname === `/${slug}/${loginSuffix}`) return NextResponse.next()
 
-    if (!sessionToken) {
+    // Verifica o cookie correto para cada seção
+    const cookieName = SECTION_COOKIE[section]
+    const hasToken = cookieName === 'authjs.session-token'
+      ? !!adminToken
+      : !!req.cookies.get(cookieName)?.value
+
+    if (!hasToken) {
       const url = new URL(`/${slug}/${loginSuffix}`, req.url)
       url.searchParams.set('callbackUrl', pathname)
       return NextResponse.redirect(url)

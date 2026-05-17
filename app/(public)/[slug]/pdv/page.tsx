@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import { useSectionAuth } from '@/hooks/use-section-auth';
 import { get, post } from '@/lib/api-client';
 import { Search, ShoppingCart, X, Truck, Store, Loader2, MapPin } from 'lucide-react';
 import Image from 'next/image';
@@ -45,8 +45,8 @@ export default function POSPage() {
   const router = useRouter();
   const slug = params.slug as string;
 
-  const { data: session, status } = useSession();
-  const tenantId = (session?.user as any)?.tenantId;
+  const { user, status } = useSectionAuth('pdv');
+  const tenantId = user?.tenantId;
 
   const [cart, setCart] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -65,15 +65,8 @@ export default function POSPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace(`/${slug}/pdv/login?callbackUrl=/${slug}/pdv`);
-      return;
     }
-    if (status === 'authenticated') {
-      const role = (session?.user as any)?.role;
-      if (role !== 'attendant') {
-        router.replace(`/${slug}/pdv/login`);
-      }
-    }
-  }, [status, session, slug, router]);
+  }, [status, slug, router]);
 
   const { data: menu, isLoading } = useQuery({
     queryKey: ['pos-menu'],
@@ -138,8 +131,7 @@ export default function POSPage() {
     );
   }
 
-  const role = (session?.user as any)?.role;
-  if (role !== 'attendant') {
+  if (user?.role !== 'attendant') {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-100">
         <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin"
