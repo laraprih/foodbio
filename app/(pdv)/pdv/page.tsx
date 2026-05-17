@@ -200,44 +200,38 @@ export default function POSPage() {
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-3 no-scrollbar">
-          {cart.map((item) => (
-            <div key={item.id} className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl group">
-              <div className="w-12 h-12 bg-white rounded-xl flex-shrink-0 flex items-center justify-center font-black text-sm">
-                {item.quantity}x
-              </div>
-              <div className="flex-1">
-                <p className="font-bold text-gray-900 text-sm leading-tight">{item.name}</p>
-                <p className="text-xs text-gray-400">R$ {(item.price * item.quantity).toFixed(2)}</p>
-              </div>
-              <button
-                onClick={() => removeFromCart(item.id)}
-                className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        {/* Scrollable area: cart items OR checkout form */}
+        <div className="flex-1 overflow-y-auto no-scrollbar">
+          {!showPayment ? (
+            <div className="p-6 space-y-3">
+              {cart.map((item) => (
+                <div key={item.id} className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl group">
+                  <div className="w-12 h-12 bg-white rounded-xl flex-shrink-0 flex items-center justify-center font-black text-sm">
+                    {item.quantity}x
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-900 text-sm leading-tight">{item.name}</p>
+                    <p className="text-xs text-gray-400">R$ {(item.price * item.quantity).toFixed(2)}</p>
+                  </div>
+                  <button
+                    onClick={() => removeFromCart(item.id)}
+                    className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ))}
+              {cart.length === 0 && (
+                <div className="flex flex-col items-center justify-center text-center py-20">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <ShoppingCart className="w-8 h-8 text-gray-200" />
+                  </div>
+                  <p className="text-gray-400 font-bold text-sm">Carrinho vazio</p>
+                </div>
+              )}
             </div>
-          ))}
-          {cart.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-center py-20">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                <ShoppingCart className="w-8 h-8 text-gray-200" />
-              </div>
-              <p className="text-gray-400 font-bold text-sm">Carrinho vazio</p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer: total + actions */}
-        <div className="p-6 bg-gray-50 border-t border-gray-100 space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-500 font-bold uppercase tracking-widest text-xs">Total a pagar</span>
-            <span className="text-3xl font-black text-gray-900">R$ {cartTotal.toFixed(2)}</span>
-          </div>
-
-          {showPayment ? (
-            <div className="space-y-4">
-
+          ) : (
+            <div className="p-6 space-y-5">
               {/* Cliente */}
               <div>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Cliente</p>
@@ -247,14 +241,14 @@ export default function POSPage() {
                     placeholder="Nome"
                     value={customerName}
                     onChange={e => setCustomerName(e.target.value)}
-                    className="bg-white rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+                    className="bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
                   />
                   <input
                     type="tel"
                     placeholder="Telefone"
                     value={customerPhone}
                     onChange={e => setCustomerPhone(e.target.value)}
-                    className="bg-white rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+                    className="bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
                   />
                 </div>
               </div>
@@ -268,7 +262,7 @@ export default function POSPage() {
                     className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
                       deliveryType === 'pickup'
                         ? 'border-[var(--color-lime-primary)] bg-[var(--color-lime-primary)] text-white'
-                        : 'border-gray-200 text-gray-600 bg-white'
+                        : 'border-gray-200 text-gray-600 bg-gray-50'
                     }`}
                   >
                     <Store className="w-4 h-4" />
@@ -279,7 +273,7 @@ export default function POSPage() {
                     className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
                       deliveryType === 'delivery'
                         ? 'border-[var(--color-lime-primary)] bg-[var(--color-lime-primary)] text-white'
-                        : 'border-gray-200 text-gray-600 bg-white'
+                        : 'border-gray-200 text-gray-600 bg-gray-50'
                     }`}
                   >
                     <Truck className="w-4 h-4" />
@@ -296,7 +290,7 @@ export default function POSPage() {
                     Endereço de entrega
                   </p>
                   <div className="space-y-2">
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
                       <input
                         type="text"
                         placeholder="CEP"
@@ -304,16 +298,16 @@ export default function POSPage() {
                         value={address.cep}
                         onChange={e => setAddress(prev => ({ ...prev, cep: e.target.value }))}
                         onBlur={handleCepBlur}
-                        className="flex-1 bg-white rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+                        className="flex-1 bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
                       />
-                      {loadingCep && <Loader2 className="w-4 h-4 animate-spin text-gray-400 self-center" />}
+                      {loadingCep && <Loader2 className="w-4 h-4 animate-spin text-gray-400 shrink-0" />}
                     </div>
                     <input
                       type="text"
                       placeholder="Rua / Avenida"
                       value={address.street}
                       onChange={e => setAddress(prev => ({ ...prev, street: e.target.value }))}
-                      className="w-full bg-white rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+                      className="w-full bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
                     />
                     <div className="grid grid-cols-5 gap-2">
                       <input
@@ -321,14 +315,14 @@ export default function POSPage() {
                         placeholder="Nº"
                         value={address.number}
                         onChange={e => setAddress(prev => ({ ...prev, number: e.target.value }))}
-                        className="col-span-2 bg-white rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+                        className="col-span-2 bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
                       />
                       <input
                         type="text"
                         placeholder="Complemento"
                         value={address.complement}
                         onChange={e => setAddress(prev => ({ ...prev, complement: e.target.value }))}
-                        className="col-span-3 bg-white rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+                        className="col-span-3 bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
                       />
                     </div>
                     <input
@@ -336,7 +330,7 @@ export default function POSPage() {
                       placeholder="Bairro"
                       value={address.neighborhood}
                       onChange={e => setAddress(prev => ({ ...prev, neighborhood: e.target.value }))}
-                      className="w-full bg-white rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+                      className="w-full bg-gray-50 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
                     />
                   </div>
                 </div>
@@ -353,7 +347,7 @@ export default function POSPage() {
                       className={`py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${
                         paymentMethod === m
                           ? 'border-[var(--color-lime-primary)] bg-[var(--color-lime-primary)] text-white'
-                          : 'border-gray-200 text-gray-600 bg-white'
+                          : 'border-gray-200 text-gray-600 bg-gray-50'
                       }`}
                     >
                       {m === 'cash' ? 'Dinheiro' : m === 'pix' ? 'PIX' : 'Cartão'}
@@ -361,20 +355,30 @@ export default function POSPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+        </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <Button variant="ghost" className="py-4" onClick={() => setShowPayment(false)}>
-                  Voltar
-                </Button>
-                <Button
-                  variant="dark"
-                  className="py-4"
-                  loading={finalizeMutation.isPending}
-                  onClick={() => finalizeMutation.mutate()}
-                >
-                  Confirmar
-                </Button>
-              </div>
+        {/* Fixed footer: total + action buttons */}
+        <div className="shrink-0 p-6 bg-gray-50 border-t border-gray-100 space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-500 font-bold uppercase tracking-widest text-xs">Total a pagar</span>
+            <span className="text-3xl font-black text-gray-900">R$ {cartTotal.toFixed(2)}</span>
+          </div>
+
+          {showPayment ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="ghost" className="py-4" onClick={() => setShowPayment(false)}>
+                Voltar
+              </Button>
+              <Button
+                variant="dark"
+                className="py-4"
+                loading={finalizeMutation.isPending}
+                onClick={() => finalizeMutation.mutate()}
+              >
+                Confirmar
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
