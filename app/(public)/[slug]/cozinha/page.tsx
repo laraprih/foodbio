@@ -396,6 +396,16 @@ export default function KDSBoard() {
     )
   }
 
+  const role = (session?.user as any)?.role
+  if (role !== 'cook') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: 'var(--color-lime-primary)', borderTopColor: 'transparent' }} />
+      </div>
+    )
+  }
+
   const arr: any[]   = Array.isArray(orders) ? orders : []
   const colData      = [
     arr.filter(o => o.status === 'confirmed'),

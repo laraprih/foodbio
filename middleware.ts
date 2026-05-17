@@ -70,19 +70,19 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     // Superadmin
-    '/superadmin/dashboard/:path*',
-    '/superadmin/empresas/:path*',
+    '/superadmin/dashboard(.*)',
+    '/superadmin/empresas(.*)',
     // Slug-based admin
-    '/:slug/dashboard/:path*',
-    '/:slug/pedidos/:path*',
-    '/:slug/cardapio/:path*',
-    '/:slug/financeiro/:path*',
-    '/:slug/configuracoes/:path*',
-    '/:slug/relatorios/:path*',
-    '/:slug/equipe/:path*',
+    '/:slug/dashboard(.*)',
+    '/:slug/pedidos(.*)',
+    '/:slug/cardapio(.*)',
+    '/:slug/financeiro(.*)',
+    '/:slug/configuracoes(.*)',
+    '/:slug/relatorios(.*)',
+    '/:slug/equipe(.*)',
     // Slug-based operadores
-    '/:slug/cozinha/:path*',
-    '/:slug/pdv/:path*',
-    '/:slug/entregas/:path*',
+    '/:slug/cozinha(.*)',
+    '/:slug/pdv(.*)',
+    '/:slug/entregas(.*)',
   ],
 }

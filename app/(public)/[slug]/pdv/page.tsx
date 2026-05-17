@@ -138,6 +138,16 @@ export default function POSPage() {
     );
   }
 
+  const role = (session?.user as any)?.role;
+  if (role !== 'attendant') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: 'var(--color-lime-primary)', borderTopColor: 'transparent' }} />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-screen bg-gray-100 overflow-hidden">
