@@ -33,13 +33,20 @@ export default function EntregaDetailPage() {
   const slug = params.slug as string;
   const id = params.id as string;
 
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace(`/${slug}/login?callbackUrl=/${slug}/entregas/${id}`);
+      router.replace(`/${slug}/entregador/login?callbackUrl=/${slug}/entregas/${id}`);
+      return;
     }
-  }, [status, slug, id, router]);
+    if (status === 'authenticated') {
+      const role = (session?.user as any)?.role;
+      if (role !== 'driver' && role !== 'admin') {
+        router.replace(`/${slug}/entregador/login`);
+      }
+    }
+  }, [status, session, slug, id, router]);
 
   const { data: delivery, isLoading } = useQuery({
     queryKey: ['delivery', id],

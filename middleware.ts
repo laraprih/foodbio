@@ -2,12 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const SUPERADMIN_ROUTES = ['/superadmin/dashboard', '/superadmin/empresas']
 
-// Seções protegidas sob /{slug}/
-const ADMIN_SECTIONS    = ['dashboard', 'pedidos', 'cardapio', 'financeiro', 'configuracoes', 'relatorios']
-const OPERATOR_SECTIONS = ['cozinha', 'pdv', 'entregas']
-const ALL_SECTIONS      = [...ADMIN_SECTIONS, ...OPERATOR_SECTIONS]
+// Mapeamento: seção → login path relativo ao slug
+const SECTION_LOGIN: Record<string, string> = {
+  dashboard:     'admin/login',
+  pedidos:       'admin/login',
+  cardapio:      'admin/login',
+  financeiro:    'admin/login',
+  configuracoes: 'admin/login',
+  relatorios:    'admin/login',
+  equipe:        'admin/login',
+  cozinha:       'cozinha/login',
+  pdv:           'pdv/login',
+  entregas:      'entregador/login',
+}
 
-// Regex: /{slug}/{section}(/{anything})?
+const ALL_SECTIONS = Object.keys(SECTION_LOGIN)
+
+// Regex: /{slug}/{seção}(/{qualquer coisa})?
 const SLUG_ROUTE_RE = new RegExp(
   `^\\/([^\\/]+)\\/(${ALL_SECTIONS.join('|')})(\\/.*)?\$`
 )
@@ -37,11 +48,17 @@ export function middleware(req: NextRequest) {
   // ── Slug-based protected routes ─────────────────────────────────────────────
   const match = pathname.match(SLUG_ROUTE_RE)
   if (match) {
-    const slug = match[1]
+    const slug    = match[1]
+    const section = match[2]
+
     if (RESERVED_SLUGS.has(slug)) return NextResponse.next()
 
+    // Ignorar as próprias páginas de login para não criar loop
+    const loginSuffix = SECTION_LOGIN[section]
+    if (pathname === `/${slug}/${loginSuffix}`) return NextResponse.next()
+
     if (!sessionToken) {
-      const url = new URL(`/${slug}/admin/login`, req.url)
+      const url = new URL(`/${slug}/${loginSuffix}`, req.url)
       url.searchParams.set('callbackUrl', pathname)
       return NextResponse.redirect(url)
     }
@@ -62,6 +79,7 @@ export const config = {
     '/:slug/financeiro/:path*',
     '/:slug/configuracoes/:path*',
     '/:slug/relatorios/:path*',
+    '/:slug/equipe/:path*',
     // Slug-based operadores
     '/:slug/cozinha/:path*',
     '/:slug/pdv/:path*',

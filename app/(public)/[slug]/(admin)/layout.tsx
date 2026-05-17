@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Utensils, ShoppingBag, DollarSign,
-  Settings, LogOut, Menu, X, ChevronRight,
+  Settings, LogOut, Menu, X, ChevronRight, Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
@@ -94,6 +94,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { icon: LayoutDashboard, label: 'Dashboard',    href: `/${slug}/dashboard` },
     { icon: ShoppingBag,     label: 'Pedidos',       href: `/${slug}/pedidos` },
     { icon: Utensils,        label: 'Cardápio',      href: `/${slug}/cardapio` },
+    { icon: Users,           label: 'Equipe',        href: `/${slug}/equipe` },
     { icon: DollarSign,      label: 'Financeiro',    href: `/${slug}/financeiro` },
     { icon: Settings,        label: 'Configurações', href: `/${slug}/configuracoes` },
   ];

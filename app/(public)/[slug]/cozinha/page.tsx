@@ -343,9 +343,16 @@ export default function KDSBoard() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace(`/${slug}/login?callbackUrl=/${slug}/cozinha`)
+      router.replace(`/${slug}/cozinha/login?callbackUrl=/${slug}/cozinha`)
+      return
     }
-  }, [status, slug, router])
+    if (status === 'authenticated') {
+      const role = (session?.user as any)?.role
+      if (role !== 'cook' && role !== 'admin') {
+        router.replace(`/${slug}/cozinha/login`)
+      }
+    }
+  }, [status, session, slug, router])
 
   const { connected } = useSocket(
     tenantId ? `kitchen:${tenantId}` : undefined,

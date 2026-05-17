@@ -22,9 +22,16 @@ export default function EntregasPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace(`/${slug}/login?callbackUrl=/${slug}/entregas`);
+      router.replace(`/${slug}/entregador/login?callbackUrl=/${slug}/entregas`);
+      return;
     }
-  }, [status, slug, router]);
+    if (status === 'authenticated') {
+      const role = (session?.user as any)?.role;
+      if (role !== 'driver' && role !== 'admin') {
+        router.replace(`/${slug}/entregador/login`);
+      }
+    }
+  }, [status, session, slug, router]);
 
   const { data: deliveries, isLoading } = useQuery({
     queryKey: ['my-deliveries'],

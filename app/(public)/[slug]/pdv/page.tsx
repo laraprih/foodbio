@@ -64,9 +64,16 @@ export default function POSPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace(`/${slug}/login?callbackUrl=/${slug}/pdv`);
+      router.replace(`/${slug}/pdv/login?callbackUrl=/${slug}/pdv`);
+      return;
     }
-  }, [status, slug, router]);
+    if (status === 'authenticated') {
+      const role = (session?.user as any)?.role;
+      if (role !== 'attendant' && role !== 'admin') {
+        router.replace(`/${slug}/pdv/login`);
+      }
+    }
+  }, [status, session, slug, router]);
 
   const { data: menu, isLoading } = useQuery({
     queryKey: ['pos-menu'],
