@@ -1,4 +1,4 @@
-# PRD — Foodin v2.0
+# PRD — Foodbio v2.0
 **SaaS de Delivery Multi-Tenant com Split de Pagamento**
 **Documento de Requisitos de Produto + Guia de Implementação**
 Versão: 2.0 | Data: 2026-05-13 | Responsável técnico: Claude Sonnet 4.6
@@ -831,7 +831,7 @@ Cliente (PWA) → Next.js → BFF → BullMQ → Gateway → Socket.io → Clien
    BFF → Prisma → cria Order(status=pending, paymentStatus=pending)
    Retorna: { orderId, total }
 
-4. Tokenização (BROWSER ONLY — nunca toca o servidor Foodin)
+4. Tokenização (BROWSER ONLY — nunca toca o servidor Foodbio)
    Mercado Pago: mp.fields.create() → mp.createCardToken() → { token }
    PagBank: PagSeguro.encryptCard() → { encryptedCard }
 
@@ -927,8 +927,8 @@ webhook-worker (assíncrono):
 ### `api/.env`
 ```env
 # Banco
-DATABASE_URL=postgresql://user:pass@pgbouncer:5432/foodin?pgbouncer=true
-DIRECT_URL=postgresql://user:pass@db.supabase.co:5432/foodin
+DATABASE_URL=postgresql://user:pass@pgbouncer:5432/foodbio?pgbouncer=true
+DIRECT_URL=postgresql://user:pass@db.supabase.co:5432/foodbio
 
 # Redis
 REDIS_URL=rediss://default:token@redis.upstash.io:6379
@@ -941,7 +941,7 @@ JWT_EXPIRES_IN=7d
 MP_MARKETPLACE_TOKEN=<marketplace-access-token>
 MP_CLIENT_ID=<oauth-app-id>
 MP_CLIENT_SECRET=<oauth-app-secret>
-MP_REDIRECT_URI=https://api.foodin.com.br/api/admin/payment/mp/callback
+MP_REDIRECT_URI=https://api.foodbio.com.br/api/admin/payment/mp/callback
 MP_WEBHOOK_SECRET=<hmac-secret>
 
 # PagBank
@@ -960,12 +960,12 @@ LOG_LEVEL=info
 
 ### `.env.local` (Next.js)
 ```env
-NEXT_PUBLIC_API_URL=https://api.foodin.com.br
-NEXT_PUBLIC_SOCKET_URL=https://api.foodin.com.br
+NEXT_PUBLIC_API_URL=https://api.foodbio.com.br
+NEXT_PUBLIC_SOCKET_URL=https://api.foodbio.com.br
 NEXT_PUBLIC_MP_PUBLIC_KEY=<mp-public-key>
 NEXT_PUBLIC_PB_PUBLIC_KEY=<pb-public-key>
 NEXTAUTH_SECRET=<random-string>
-NEXTAUTH_URL=https://foodin.com.br
+NEXTAUTH_URL=https://foodbio.com.br
 GOOGLE_CLIENT_ID=<google-oauth-id>
 GOOGLE_CLIENT_SECRET=<google-oauth-secret>
 ```
@@ -1004,7 +1004,7 @@ GOOGLE_CLIENT_SECRET=<google-oauth-secret>
 - Preservar Inter font, max-w-[414px], bg-gray-100
 
 #### `public/manifest.json`
-- `name: "Foodin"`, `short_name: "Foodin"`
+- `name: "Foodbio"`, `short_name: "Foodbio"`
 - `theme_color: "#1a1a1a"`, `background_color: "#F1F9E8"`
 - `display: "standalone"`, `orientation: "portrait"`
 - `start_url: "/"`
@@ -1046,7 +1046,7 @@ Regra: se `addItem` com `restaurantId` diferente do atual → lançar erro `"Voc
 
 Computed (getters): `total: number`, `itemCount: number`, `isEmpty: boolean`
 
-Persistência: `zustand/middleware/persist` com key `'foodin-cart'`
+Persistência: `zustand/middleware/persist` com key `'foodbio-cart'`
 
 #### `store/session-store.ts`
 Estado não persistido.
@@ -1320,7 +1320,7 @@ Timeline de status do pedido.
 #### `api/package.json`
 ```json
 {
-  "name": "foodin-api",
+  "name": "foodbio-api",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
@@ -1675,7 +1675,7 @@ jobs:
 
 #### `fly.toml`
 ```toml
-app = "foodin-api"
+app = "foodbio-api"
 primary_region = "gru"
 
 [build]
@@ -1706,13 +1706,13 @@ primary_region = "gru"
 
 ## 9. Checklist de Segurança
 
-- [ ] Dados de cartão NUNCA passam pelos servidores Foodin (tokenização apenas no browser)
+- [ ] Dados de cartão NUNCA passam pelos servidores Foodbio (tokenização apenas no browser)
 - [ ] `access_token` dos gateways criptografado com AES-256-GCM antes de salvar no banco
 - [ ] Chave de criptografia em variável de ambiente, nunca no código
 - [ ] Webhooks validados por HMAC antes de qualquer processamento
 - [ ] Rate limiting por tenant em todas as rotas críticas
 - [ ] JWT com expiração curta (7d) + refresh token
-- [ ] CORS configurado apenas para domínios Foodin
+- [ ] CORS configurado apenas para domínios Foodbio
 - [ ] Headers de segurança via `@fastify/helmet`
 - [ ] Inputs validados com Zod antes de tocar o banco
 - [ ] Logs redact PAN, tokens, senhas

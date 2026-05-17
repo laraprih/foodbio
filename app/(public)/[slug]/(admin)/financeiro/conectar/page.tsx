@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { CreditCard, ArrowLeft, ExternalLink, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { get, post, isApiError } from '@/lib/api-client'
@@ -16,7 +16,9 @@ import type { z } from 'zod'
 type PBForm = z.infer<typeof connectPagBankSchema>
 
 export default function ConectarContaPage() {
+  const params = useParams()
   const router = useRouter()
+  const slug = params.slug as string
   const [loadingMP, setLoadingMP] = useState(false)
 
   const {
@@ -43,13 +45,13 @@ export default function ConectarContaPage() {
       return
     }
     toast.success('Conta PagBank vinculada com sucesso!')
-    router.push('/financeiro?connected=true')
+    router.push(`/${slug}/financeiro?connected=true`)
   }
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <Link
-        href="/financeiro"
+        href={`/${slug}/financeiro`}
         className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-500 hover:text-zinc-900 mb-8"
       >
         <ArrowLeft className="w-4 h-4" />

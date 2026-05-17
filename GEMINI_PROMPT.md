@@ -1,4 +1,4 @@
-# Prompt de Implementação — Foodin v2.0
+# Prompt de Implementação — Foodbio v2.0
 **Para: Gemini (Google AI Studio / Gemini CLI)**
 **Projeto:** `/home/projetasaude/Documentos/foodbio`
 
@@ -6,7 +6,7 @@
 
 ## IDENTIDADE E MISSÃO
 
-Você é um engenheiro sênior full-stack implementando o **Foodin v2.0**, uma plataforma SaaS
+Você é um engenheiro sênior full-stack implementando o **Foodbio v2.0**, uma plataforma SaaS
 de delivery multi-tenant com split de pagamento. Seu trabalho é transformar um protótipo
 visual Next.js 15 num produto completo, seguindo fielmente o `PRD.md` deste repositório.
 
@@ -56,7 +56,7 @@ Crie o arquivo `PROGRESSO.md` na raiz do projeto assim que começar.
 Atualize-o a cada arquivo concluído. Formato exato:
 
 ```markdown
-# PROGRESSO — Foodin v2.0
+# PROGRESSO — Foodbio v2.0
 Última atualização: [data hora]
 Fase atual: [nome da fase]
 
@@ -270,8 +270,8 @@ ATENÇÃO: Este arquivo já existe. Edite apenas o necessário:
 
 ```json
 {
-  "name": "Foodin — Delivery",
-  "short_name": "Foodin",
+  "name": "Foodbio — Delivery",
+  "short_name": "Foodbio",
   "description": "Peça comida do seu restaurante favorito",
   "start_url": "/",
   "display": "standalone",
@@ -345,7 +345,7 @@ Computed (getters via Zustand get):
   Exportar hooks separados: useCartItems(), useCartTotal(), useCartCount(), useCartRestaurant()
 
 Persistência:
-  persist middleware com key 'foodin-cart-v1'
+  persist middleware com key 'foodbio-cart-v1'
   partialize: salvar apenas items, restaurantId, restaurantSlug
   version: 1 (para migration futura)
 ```
@@ -939,7 +939,7 @@ Formulário com React Hook Form + loginSchema.
 
 Visual: consistente com o design system
   - Container: max-w-sm mx-auto pt-16 px-6
-  - Logo: "Foodin" em font-extrabold text-3xl com punto lime
+  - Logo: "Foodbio" em font-extrabold text-3xl com punto lime
   - Campos: <Input> email + password
   - Botão: <Button variant="dark" size="lg">Entrar</Button>
   - Link "Entrar com Google" + ícone Google
@@ -1087,7 +1087,7 @@ api/
 
 ```json
 {
-  "name": "foodin-api",
+  "name": "foodbio-api",
   "version": "1.0.0",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -1711,7 +1711,7 @@ Layout dois-painéis:
   - Main content à direita
 
 Sidebar:
-  - Header: Logo "Foodin" + nome do restaurante
+  - Header: Logo "Foodbio" + nome do restaurante
   - Links com Lucide icons:
     Dashboard (LayoutDashboard), Cardápio (UtensilsCrossed),
     Pedidos (ShoppingBag), Financeiro (CreditCard),

@@ -82,7 +82,7 @@ describe('processSplit', () => {
       expect.objectContaining({
         total: 100,
         marketplaceFee: 8,
-        externalReference: 'foodin_order-123',
+        externalReference: 'foodbio_order-123',
       })
     )
     expect(prisma.$transaction).toHaveBeenCalled()

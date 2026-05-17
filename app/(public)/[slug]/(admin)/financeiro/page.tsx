@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { get, isApiError } from '@/lib/api-client'
 import { DollarSign, TrendingUp, AlertCircle, CheckCircle, ExternalLink, Plus } from 'lucide-react'
@@ -19,6 +20,9 @@ interface FinanceiroSummary {
 }
 
 export default function FinanceiroPage() {
+  const params = useParams()
+  const slug = params.slug as string
+
   const { data: summary, isLoading } = useQuery({
     queryKey: ['financeiro-summary'],
     queryFn: () => get<FinanceiroSummary>('/api/admin/reports/summary'),
@@ -72,7 +76,7 @@ export default function FinanceiroPage() {
         </div>
         {!s?.connected && (
           <Link
-            href="/financeiro/conectar"
+            href={`/${slug}/financeiro/conectar`}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[var(--color-lime-primary)] text-white font-bold text-sm hover:brightness-90 transition-all"
           >
             <Plus className="w-4 h-4" />
@@ -99,7 +103,7 @@ export default function FinanceiroPage() {
           </p>
         </div>
         {!s?.connected && (
-          <Link href="/financeiro/conectar" className="text-sm font-bold text-yellow-700 flex items-center gap-1 hover:underline">
+          <Link href={`/${slug}/financeiro/conectar`} className="text-sm font-bold text-yellow-700 flex items-center gap-1 hover:underline">
             Configurar <ExternalLink className="w-3.5 h-3.5" />
           </Link>
         )}

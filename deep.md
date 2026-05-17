@@ -1,4 +1,4 @@
-# 📋 PRD Completo – Foodin  
+# 📋 PRD Completo – Foodbio  
 **SaaS de Delivery Multi-Tenant com Split de Pagamento**  
 **Versão 2.0**
 
@@ -7,7 +7,7 @@
 ## 1. Introdução
 
 ### 1.1 Visão do Produto
-O **Foodin** é uma plataforma SaaS completa para restaurantes, lanchonetes e estabelecimentos de alimentação. Oferece um e-commerce integrado para pedidos online (com pagamento via Pix e cartão), um módulo de loja física (PDV), um painel de cozinha para gerenciar a produção por ordem e um app de entregador para logística da última milha. Com a nova versão, o Foodin atua como marketplace, processando pagamentos e dividindo automaticamente os valores entre o restaurante (seller) e a plataforma por meio do **split de pagamento** das APIs do Mercado Pago ou PagBank, eliminando repasses manuais.
+O **Foodbio** é uma plataforma SaaS completa para restaurantes, lanchonetes e estabelecimentos de alimentação. Oferece um e-commerce integrado para pedidos online (com pagamento via Pix e cartão), um módulo de loja física (PDV), um painel de cozinha para gerenciar a produção por ordem e um app de entregador para logística da última milha. Com a nova versão, o Foodbio atua como marketplace, processando pagamentos e dividindo automaticamente os valores entre o restaurante (seller) e a plataforma por meio do **split de pagamento** das APIs do Mercado Pago ou PagBank, eliminando repasses manuais.
 
 ### 1.2 Problema Resolvido
 - Pequenos restaurantes não têm capital ou conhecimento para montar um sistema próprio de delivery.
@@ -18,7 +18,7 @@ O **Foodin** é uma plataforma SaaS completa para restaurantes, lanchonetes e es
 ### 1.3 Proposta de Valor
 - Plataforma **multi-tenant** com **comissão zero em assinatura** (monetização via split automático).
 - Integração nativa com Mercado Pago e PagBank, com checkout transparente (sem redirecionamento).
-- Divisão do valor do pedido entre restaurante e Foodin no momento da transação.
+- Divisão do valor do pedido entre restaurante e Foodbio no momento da transação.
 - PDV, cozinha e entregador conectados em tempo real via WebSockets.
 - Ferramentas de marketing local para aquisição de clientes por bairro.
 
@@ -75,7 +75,7 @@ O **Foodin** é uma plataforma SaaS completa para restaurantes, lanchonetes e es
 - **Configuração de pagamentos:**
   - Conexão com conta Mercado Pago ou PagBank (fluxo de onboarding inline).
   - Visualização do status da conta (ativo, pendente).
-  - Configuração da taxa de comissão do Foodin (definida pela plataforma, exibida ao restaurante).
+  - Configuração da taxa de comissão do Foodbio (definida pela plataforma, exibida ao restaurante).
 - **Relatórios:** vendas por período, ticket médio, pratos mais vendidos, faturamento, **relatório de repasses (split)**.
 - **Usuários e permissões:** dono, atendente, cozinheiro, entregador.
 
@@ -121,15 +121,15 @@ O **Foodin** é uma plataforma SaaS completa para restaurantes, lanchonetes e es
 - No dashboard admin, o restaurante clica em “Conectar conta financeira”.
 - Escolhe Mercado Pago ou PagBank.
 - Redirecionado para autorização OAuth (Mercado Pago) ou fluxo de cadastro/vinculação (PagBank).
-- O Foodin armazena o `external_account_id` e tokens necessários na tabela `tenant_payment_accounts`.
+- O Foodbio armazena o `external_account_id` e tokens necessários na tabela `tenant_payment_accounts`.
 
 #### 4.6.2 Fluxo de Pagamento no Checkout
 1. Cliente finaliza pedido e insere dados de pagamento (tokenização no frontend).
-2. BFF do Foodin cria requisição ao gateway escolhido:
-   - **Mercado Pago:** POST `/v1/orders` com `processing_mode: "aggregator"` e `marketplace_fee` (comissão do Foodin). O `seller` é identificado automaticamente porque a transação é feita com o token do marketplace que tem vínculo com a conta do restaurante.
+2. BFF do Foodbio cria requisição ao gateway escolhido:
+   - **Mercado Pago:** POST `/v1/orders` com `processing_mode: "aggregator"` e `marketplace_fee` (comissão do Foodbio). O `seller` é identificado automaticamente porque a transação é feita com o token do marketplace que tem vínculo com a conta do restaurante.
    - **PagBank:** POST `/v1/orders` com `charges.split.receivers` contendo o `account_id` do restaurante e o percentual de divisão.
 3. Gateway processa, retorna status.
-4. Foodin registra a transação na tabela `payment_transactions` e atualiza o pedido.
+4. Foodbio registra a transação na tabela `payment_transactions` e atualiza o pedido.
 
 #### 4.6.3 Exemplo de Split (Mercado Pago)
 ```json
@@ -138,7 +138,7 @@ O **Foodin** é uma plataforma SaaS completa para restaurantes, lanchonetes e es
   "processing_mode": "aggregator",
   "total_amount": "100.00",
   "marketplace_fee": "8.00",
-  "external_reference": "order_foodin_789",
+  "external_reference": "order_foodbio_789",
   "payer": { ... },
   "items": [ ... ],
   "payment_method": {
@@ -147,13 +147,13 @@ O **Foodin** é uma plataforma SaaS completa para restaurantes, lanchonetes e es
   }
 }
 
-O Mercado Pago cobra a taxa do seller e depois divide: R 92 00 para o restaurante R 8,00 para o Foodin (já descontada a taxa do gateway do lado do seller).
+O Mercado Pago cobra a taxa do seller e depois divide: R 92 00 para o restaurante R 8,00 para o Foodbio (já descontada a taxa do gateway do lado do seller).
 
 
 4.6.4 Exemplo de Split (PagBank)
 json
 {
-  "reference_id": "order_foodin_789",
+  "reference_id": "order_foodbio_789",
   "charges": [{
     "amount": { "value": 10000, "currency": "BRL" },
     "split": {
@@ -165,7 +165,7 @@ json
     "payment_method": { "type": "CREDIT_CARD", "credit_card": { "token": "token_cartao" } }
   }]
 }
-A taxa do PagBank é debitada do recebedor primário (Foodin), que configura sua margem no percentual de split.
+A taxa do PagBank é debitada do recebedor primário (Foodbio), que configura sua margem no percentual de split.
 
 
 5. Requisitos Não Funcionais
@@ -212,7 +212,7 @@ Rotas principais:
 
 
 {
-  "reference_id": "order_foodin_789",
+  "reference_id": "order_foodbio_789",
   "charges": [{
     "amount": { "value": 10000, "currency": "BRL" },
     "split": {
@@ -225,7 +225,7 @@ Rotas principais:
   }]
 }
 
-A taxa do PagBank é debitada do recebedor primário (Foodin), que configura sua margem no percentual de split.
+A taxa do PagBank é debitada do recebedor primário (Foodbio), que configura sua margem no percentual de split.
 
 5. Requisitos Não Funcionais
 Categoria	Descrição
