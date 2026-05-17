@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { get, patch, isApiError } from '@/lib/api-client';
 import { toast } from 'react-hot-toast';
 import { ArrowLeft, Navigation, Phone, CheckCircle, Package } from 'lucide-react';
@@ -29,12 +30,22 @@ export default function EntregaDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const slug = params.slug as string;
   const id = params.id as string;
+
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace(`/${slug}/login?callbackUrl=/${slug}/entregas/${id}`);
+    }
+  }, [status, slug, id, router]);
 
   const { data: delivery, isLoading } = useQuery({
     queryKey: ['delivery', id],
     queryFn: () => get<DeliveryDetail>(`/bff/api/delivery/${id}`),
     refetchInterval: 20000,
+    enabled: status === 'authenticated',
   });
 
   const pickUp = useMutation({
@@ -48,10 +59,18 @@ export default function EntregaDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['delivery', id] });
       toast.success('Entrega confirmada!');
-      setTimeout(() => router.push('/entregas'), 1500);
+      setTimeout(() => router.push(`/${slug}/entregas`), 1500);
     },
     onError: () => toast.error('Erro ao confirmar entrega'),
   });
+
+  if (status === 'loading' || status === 'unauthenticated') {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Spinner size="lg" className="text-[var(--color-lime-primary)]" />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -68,7 +87,7 @@ export default function EntregaDetailPage() {
           <Package className="w-7 h-7 text-gray-300" />
         </div>
         <p className="font-bold text-gray-700 mb-2">Entrega não encontrada</p>
-        <Link href="/entregas" className="text-sm font-bold text-zinc-900 underline">Voltar</Link>
+        <Link href={`/${slug}/entregas`} className="text-sm font-bold text-zinc-900 underline">Voltar</Link>
       </div>
     );
   }
@@ -82,7 +101,7 @@ export default function EntregaDetailPage() {
     <div className="max-w-lg mx-auto">
       {/* Header */}
       <div className="sticky top-14 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-        <Link href="/entregas" className="w-9 h-9 rounded-xl border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors">
+        <Link href={`/${slug}/entregas`} className="w-9 h-9 rounded-xl border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors">
           <ArrowLeft className="w-4 h-4 text-gray-600" />
         </Link>
         <div>
@@ -136,7 +155,7 @@ export default function EntregaDetailPage() {
               <p className="text-sm text-gray-400 mt-0.5">Esta entrega foi concluída</p>
             </div>
             <Link
-              href="/entregas"
+              href={`/${slug}/entregas`}
               className="mt-1 px-6 py-3 rounded-xl bg-[var(--color-lime-primary)] text-white font-bold text-sm hover:brightness-90 transition-all"
             >
               Ver próximas entregas

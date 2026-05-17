@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { get, post } from '@/lib/api-client';
@@ -40,12 +41,16 @@ async function fetchCep(cep: string): Promise<Partial<AddressState> | null> {
 }
 
 export default function POSPage() {
-  const { data: session } = useSession();
+  const params = useParams();
+  const router = useRouter();
+  const slug = params.slug as string;
+
+  const { data: session, status } = useSession();
   const tenantId = (session?.user as any)?.tenantId;
 
   const [cart, setCart] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'pix'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'pix' | 'credit_card'>('cash');
   const [showPayment, setShowPayment] = useState(false);
 
   // Customer + delivery
@@ -57,9 +62,16 @@ export default function POSPage() {
   });
   const [loadingCep, setLoadingCep] = useState(false);
 
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace(`/${slug}/login?callbackUrl=/${slug}/pdv`);
+    }
+  }, [status, slug, router]);
+
   const { data: menu, isLoading } = useQuery({
     queryKey: ['pos-menu'],
     queryFn: () => get<any>(`/api/admin/menu`),
+    enabled: status === 'authenticated',
   });
 
   const addToCart = (product: any) => {
@@ -109,6 +121,15 @@ export default function POSPage() {
     },
     onError: () => toast.error('Erro ao finalizar pedido'),
   });
+
+  if (status === 'loading' || status === 'unauthenticated') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: 'var(--color-lime-primary)', borderTopColor: 'transparent' }} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -343,7 +364,7 @@ export default function POSPage() {
                   {(['cash', 'pix', 'credit_card'] as const).map(m => (
                     <button
                       key={m}
-                      onClick={() => setPaymentMethod(m as any)}
+                      onClick={() => setPaymentMethod(m)}
                       className={`py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${
                         paymentMethod === m
                           ? 'border-[var(--color-lime-primary)] bg-[var(--color-lime-primary)] text-white'

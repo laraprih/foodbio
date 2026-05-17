@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { get, patch } from '@/lib/api-client'
@@ -327,14 +328,24 @@ function OrderCard({
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function KDSBoard() {
+  const params = useParams()
+  const router = useRouter()
+  const slug = params.slug as string
+
   const queryClient = useQueryClient()
-  const { data: session } = useSession()
-  const now       = useNow()
-  const tenantId  = (session?.user as any)?.tenantId
+  const { data: session, status } = useSession()
+  const now        = useNow()
+  const tenantId   = (session?.user as any)?.tenantId
   const tenantName = (session?.user as any)?.tenantName
 
   // Mobile: active tab
   const [activeTab, setActiveTab] = useState(0)
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace(`/${slug}/login?callbackUrl=/${slug}/cozinha`)
+    }
+  }, [status, slug, router])
 
   const { connected } = useSocket(
     tenantId ? `kitchen:${tenantId}` : undefined,
@@ -349,12 +360,12 @@ export default function KDSBoard() {
     queryFn: () => get<any>('/api/admin/orders'),
     refetchInterval: 5_000,
     refetchOnWindowFocus: true,
+    enabled: status === 'authenticated',
   })
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       patch<any>(`/api/admin/orders/${id}`, { status }),
-    // Optimistic update: moves the card immediately in the UI
     onMutate: async ({ id, status }) => {
       await queryClient.cancelQueries({ queryKey: ['kds-orders'] })
       const prev = queryClient.getQueryData(['kds-orders'])
@@ -368,6 +379,15 @@ export default function KDSBoard() {
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['kds-orders'] }),
   })
+
+  if (status === 'loading' || status === 'unauthenticated') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: 'var(--color-lime-primary)', borderTopColor: 'transparent' }} />
+      </div>
+    )
+  }
 
   const arr: any[]   = Array.isArray(orders) ? orders : []
   const colData      = [

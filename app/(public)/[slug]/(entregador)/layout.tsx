@@ -1,13 +1,15 @@
 'use client';
 
 import React from 'react';
-import { usePathname } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Package, User, Bike } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function EntregadorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const params = useParams();
+  const slug = params.slug as string;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -35,10 +37,10 @@ export default function EntregadorLayout({ children }: { children: React.ReactNo
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40">
         <div className="max-w-lg mx-auto px-4 py-2 flex items-center justify-around">
           <Link
-            href="/entregas"
+            href={`/${slug}/entregas`}
             className={cn(
               'flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition-colors',
-              pathname.startsWith('/entregas')
+              pathname.includes('/entregas')
                 ? 'text-zinc-900'
                 : 'text-gray-400 hover:text-gray-600'
             )}

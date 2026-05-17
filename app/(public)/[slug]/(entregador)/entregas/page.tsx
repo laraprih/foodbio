@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { get, patch, isApiError } from '@/lib/api-client';
@@ -11,15 +12,26 @@ import { useSocket } from '@/hooks/use-socket';
 import { Package, CheckCircle2 } from 'lucide-react';
 
 export default function EntregasPage() {
+  const params = useParams();
+  const router = useRouter();
+  const slug = params.slug as string;
+
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const tenantId = (session?.user as any)?.tenantId;
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace(`/${slug}/login?callbackUrl=/${slug}/entregas`);
+    }
+  }, [status, slug, router]);
 
   const { data: deliveries, isLoading } = useQuery({
     queryKey: ['my-deliveries'],
     queryFn: () => get<any[]>('/api/delivery'),
     refetchInterval: 8_000,
     refetchOnWindowFocus: true,
+    enabled: status === 'authenticated',
   });
 
   useSocket(tenantId ? `drivers:${tenantId}` : undefined, {
@@ -38,6 +50,15 @@ export default function EntregasPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['my-deliveries'] }); toast.success('Entrega confirmada!'); },
     onError: () => toast.error('Erro ao confirmar entrega'),
   });
+
+  if (status === 'loading' || status === 'unauthenticated') {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: 'var(--color-lime-primary)', borderTopColor: 'transparent' }} />
+      </div>
+    );
+  }
 
   const deliveriesArr = isApiError(deliveries) || !Array.isArray(deliveries) ? [] : deliveries;
   const active = deliveriesArr.filter((d: any) => d.status !== 'delivered');
