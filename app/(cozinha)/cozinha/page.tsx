@@ -183,6 +183,19 @@ function OrderCard({
 
   const min    = elapsed(order.createdAt)
   const isLate = min >= 20
+
+  // "Prontos" column: action depends on order type
+  const isReadyCol = col.id === 'ready'
+  const actionNextStatus: string = isReadyCol
+    ? (order.type === 'delivery' ? 'dispatched' : 'delivered')
+    : col.nextStatus
+  const actionLabel = isReadyCol
+    ? (order.type === 'delivery' ? 'Saiu pra entrega' : 'Confirmar Retirada')
+    : col.actionLabel
+  const ActionIcon = isReadyCol
+    ? (order.type === 'delivery' ? Truck : Store)
+    : col.ActionIcon
+
   const addr   = order.deliveryAddress
     ? typeof order.deliveryAddress === 'string'
       ? (() => { try { return JSON.parse(order.deliveryAddress) } catch { return null } })()
@@ -297,14 +310,14 @@ function OrderCard({
           ✕
         </button>
         <button
-          onClick={() => onAction(order.id, col.nextStatus)}
+          onClick={() => onAction(order.id, actionNextStatus)}
           className={cn(
             'col-span-4 py-2.5 rounded-xl font-bold text-sm text-white transition-all active:scale-95 flex items-center justify-center gap-2',
             col.actionBg
           )}
         >
-          <col.ActionIcon className="w-4 h-4" />
-          {col.actionLabel}
+          <ActionIcon className="w-4 h-4" />
+          {actionLabel}
         </button>
       </div>
     </div>

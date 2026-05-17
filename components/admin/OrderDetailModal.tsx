@@ -15,6 +15,7 @@ const STATUS_LABELS: Record<string, string> = {
   confirmed: 'Confirmado',
   preparing: 'Preparando',
   ready:     'Pronto',
+  dispatched:'A caminho',
   delivered: 'Entregue',
   cancelled: 'Cancelado',
 }
@@ -24,6 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
   confirmed: 'bg-blue-100 text-blue-700',
   preparing: 'bg-yellow-100 text-yellow-700',
   ready:     'bg-orange-100 text-orange-700',
+  dispatched:'bg-purple-100 text-purple-700',
   delivered: 'bg-green-100 text-green-700',
   cancelled: 'bg-red-100 text-red-600',
 }
@@ -48,28 +50,56 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   refunded: 'Estornado',
 }
 
-const NEXT_STATUS: Record<string, string> = {
+// ── tracker steps por tipo de pedido ────────────────────────────────────────
+
+const STEPS_DELIVERY = [
+  { id: 'pending',    label: 'Recebido',   Icon: Clock },
+  { id: 'confirmed',  label: 'Confirmado', Icon: CheckCircle2 },
+  { id: 'preparing',  label: 'Preparo',    Icon: ChefHat },
+  { id: 'ready',      label: 'Pronto',     Icon: Package },
+  { id: 'dispatched', label: 'A caminho',  Icon: Truck },
+  { id: 'delivered',  label: 'Entregue',   Icon: CheckCircle },
+]
+
+const STEPS_PICKUP = [
+  { id: 'pending',   label: 'Recebido',   Icon: Clock },
+  { id: 'confirmed', label: 'Confirmado', Icon: CheckCircle2 },
+  { id: 'preparing', label: 'Preparo',    Icon: ChefHat },
+  { id: 'ready',     label: 'Pronto',     Icon: Package },
+  { id: 'delivered', label: 'Retirado',   Icon: Store },
+]
+
+// ── próximos status por tipo ──────────────────────────────────────────────
+
+const NEXT_DELIVERY: Record<string, string> = {
+  pending:   'confirmed',
+  confirmed: 'preparing',
+  preparing: 'ready',
+  ready:     'dispatched',
+  dispatched:'delivered',
+}
+
+const NEXT_PICKUP: Record<string, string> = {
   pending:   'confirmed',
   confirmed: 'preparing',
   preparing: 'ready',
   ready:     'delivered',
 }
 
-const NEXT_STATUS_LABELS: Record<string, string> = {
-  confirmed: 'Confirmar pedido',
-  preparing: 'Iniciar preparo',
-  ready:     'Marcar como pronto',
-  delivered: 'Marcar como entregue',
+const NEXT_LABELS: Record<string, string> = {
+  confirmed:  'Confirmar pedido',
+  preparing:  'Iniciar preparo',
+  ready:      'Marcar como pronto',
+  dispatched: 'Saiu pra entrega',
+  delivered:  'Pedido entregue',
 }
 
-const TRACKER_STEPS = [
-  { id: 'pending',    label: 'Recebido',  Icon: Clock },
-  { id: 'confirmed',  label: 'Confirmado', Icon: CheckCircle2 },
-  { id: 'preparing',  label: 'Preparo',   Icon: ChefHat },
-  { id: 'ready',      label: 'Pronto',    Icon: Package },
-  { id: 'dispatched', label: 'Enviado',   Icon: Truck },
-  { id: 'delivered',  label: 'Entregue',  Icon: CheckCircle },
-]
+const NEXT_LABELS_PICKUP: Record<string, string> = {
+  ...NEXT_LABELS,
+  delivered: 'Confirmar retirada',
+}
+
+// ── props ─────────────────────────────────────────────────────────────────
 
 interface OrderDetailModalProps {
   order: any | null
@@ -90,26 +120,34 @@ export default function OrderDetailModal({
 }: OrderDetailModalProps) {
   if (!order) return null
 
+  const isDelivery = order.type === 'delivery'
+  const trackerSteps = isDelivery ? STEPS_DELIVERY : STEPS_PICKUP
+  const nextStatusMap = isDelivery ? NEXT_DELIVERY : NEXT_PICKUP
+  const nextLabels    = isDelivery ? NEXT_LABELS   : NEXT_LABELS_PICKUP
+
   const addr = order.address
     ? typeof order.address === 'string'
       ? (() => { try { return JSON.parse(order.address) } catch { return null } })()
       : order.address
-    : null
+    : order.deliveryAddress
+      ? typeof order.deliveryAddress === 'string'
+        ? (() => { try { return JSON.parse(order.deliveryAddress) } catch { return null } })()
+        : order.deliveryAddress
+      : null
 
-  const nextStatus  = NEXT_STATUS[order.status]
-  const canAdvance  = !!nextStatus
-  const canCancel   = order.status !== 'cancelled' && order.status !== 'delivered'
-  const canRefund   = order.paymentStatus === 'approved' && order.paymentMethod !== 'cash'
+  const nextStatus = nextStatusMap[order.status]
+  const canAdvance = !!nextStatus
+  const canCancel  = order.status !== 'cancelled' && order.status !== 'delivered'
+  const canRefund  = order.paymentStatus === 'approved' && order.paymentMethod !== 'cash'
 
   const createdAt = new Date(order.createdAt)
   const timeStr = createdAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   const dateStr = createdAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 
-  const activeIdx = TRACKER_STEPS.findIndex((s) => s.id === order.status)
+  const activeIdx = trackerSteps.findIndex((s) => s.id === order.status)
 
   return (
     <Modal open={open} onClose={onClose} size="2xl">
-      {/* layout: flex col sem scroll externo */}
       <div className="flex flex-col gap-3">
 
         {/* ── Header ── */}
@@ -122,9 +160,9 @@ export default function OrderDetailModal({
           </span>
           <span className={cn(
             'flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full',
-            order.type === 'delivery' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'
+            isDelivery ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'
           )}>
-            {order.type === 'delivery'
+            {isDelivery
               ? <><Truck className="w-3 h-3" />Delivery</>
               : <><Store className="w-3 h-3" />Retirada</>}
           </span>
@@ -133,10 +171,10 @@ export default function OrderDetailModal({
           </span>
         </div>
 
-        {/* ── Tracker compacto ── */}
+        {/* ── Tracker — steps dinâmicos por tipo ── */}
         <div className="bg-gray-50 rounded-xl px-3 py-2.5 overflow-x-auto no-scrollbar">
           <div className="flex items-center min-w-max">
-            {TRACKER_STEPS.map((step, idx) => {
+            {trackerSteps.map((step, idx) => {
               const done   = idx < activeIdx
               const active = idx === activeIdx
               const { Icon } = step
@@ -160,7 +198,7 @@ export default function OrderDetailModal({
                       {step.label}
                     </span>
                   </div>
-                  {idx < TRACKER_STEPS.length - 1 && (
+                  {idx < trackerSteps.length - 1 && (
                     <div className={cn(
                       'h-0.5 w-8 shrink-0 mx-0.5 mb-3 transition-colors',
                       done ? 'bg-[var(--color-lime-primary)]' : 'bg-gray-200'
@@ -172,7 +210,7 @@ export default function OrderDetailModal({
           </div>
         </div>
 
-        {/* ── Info: cliente + entrega + pagamento em linha ── */}
+        {/* ── Info grid: cliente + endereço/balcão + pagamento ── */}
         <div className="grid grid-cols-3 gap-2">
           {/* Cliente */}
           <div className="bg-gray-50 rounded-xl p-2.5 space-y-1.5">
@@ -187,18 +225,23 @@ export default function OrderDetailModal({
             </div>
           </div>
 
-          {/* Endereço */}
+          {/* Endereço — só delivery mostra endereço, pickup mostra balcão */}
           <div className="bg-gray-50 rounded-xl p-2.5 space-y-1.5">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Endereço</p>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+              {isDelivery ? 'Endereço' : 'Local de retirada'}
+            </p>
             <div className="flex items-start gap-1.5">
-              <MapPin className="w-3 h-3 text-gray-400 shrink-0 mt-0.5" />
-              {addr ? (
+              {isDelivery
+                ? <MapPin className="w-3 h-3 text-gray-400 shrink-0 mt-0.5" />
+                : <Store className="w-3 h-3 text-orange-400 shrink-0 mt-0.5" />}
+              {isDelivery && addr ? (
                 <div>
                   <p className="text-xs font-bold text-gray-900 leading-tight">{addr.street}, {addr.number}</p>
                   <p className="text-[10px] text-gray-500 leading-tight">{addr.neighborhood}</p>
+                  {addr.city && <p className="text-[10px] text-gray-400">{addr.city}/{addr.state}</p>}
                 </div>
               ) : (
-                <span className="text-xs font-semibold text-gray-700">Balcão</span>
+                <span className="text-xs font-semibold text-orange-600">Balcão / Loja</span>
               )}
             </div>
           </div>
@@ -246,7 +289,6 @@ export default function OrderDetailModal({
             ))}
           </div>
 
-          {/* Totais */}
           <div className="border-t border-gray-200 mt-2.5 pt-2 space-y-1">
             {(order.deliveryFee ?? 0) > 0 && (
               <div className="flex justify-between text-xs text-gray-500">
@@ -270,7 +312,7 @@ export default function OrderDetailModal({
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[var(--color-lime-primary)] text-white font-bold text-sm hover:brightness-90 transition-all disabled:opacity-50"
             >
               <ChevronRight className="w-4 h-4" />
-              {NEXT_STATUS_LABELS[nextStatus] ?? `Avançar para ${nextStatus}`}
+              {nextLabels[nextStatus] ?? `Avançar para ${nextStatus}`}
             </button>
           )}
 
