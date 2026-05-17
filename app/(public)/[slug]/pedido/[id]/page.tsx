@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, Phone, CreditCard, Package, Copy, CheckCircle2, Clock } from 'lucide-react';
@@ -18,17 +18,16 @@ import Image from 'next/image';
 export default function OrderStatusPage() {
   const { slug, id } = useParams<{ slug: string; id: string }>();
   const router = useRouter();
-  const { socket, connected } = useSocket(`order:${id}`);
-  const { data: order, isLoading, refetch } = useOrder(id, connected);
+  const { data: order, isLoading, refetch } = useOrder(id, false);
 
-  useEffect(() => {
-    if (!socket) return;
-    const handler = (data: any) => {
-      if (data.orderId === id) { refetch(); toast.success(`Status atualizado: ${data.status}`); }
-    };
-    socket.on('order:update', handler);
-    return () => { socket.off('order:update', handler); };
-  }, [socket, id, refetch]);
+  useSocket(`order:${id}`, {
+    'order:update': (data: any) => {
+      if (data.orderId === id) {
+        refetch()
+        toast.success(`Status atualizado: ${data.status}`)
+      }
+    },
+  });
 
   if (isLoading) {
     return (

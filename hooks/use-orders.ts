@@ -21,11 +21,12 @@ interface PayOrderPayload {
   gateway: string
 }
 
-export function useGetOrder(id: string, socketConnected?: boolean) {
+export function useGetOrder(id: string, _socketConnected?: boolean) {
   return useQuery({
     queryKey: ['order', id],
     queryFn: () => get<Order>(`/api/store/orders/${id}`),
-    refetchInterval: socketConnected ? false : 5_000,
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
     enabled: !!id,
   })
 }

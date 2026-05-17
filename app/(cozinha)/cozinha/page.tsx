@@ -334,13 +334,26 @@ export default function KDSBoard() {
   const { data: orders, isLoading, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['kds-orders'],
     queryFn: () => get<any>('/api/admin/orders'),
-    refetchInterval: 30000,
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
   })
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       patch<any>(`/api/admin/orders/${id}`, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['kds-orders'] }),
+    // Optimistic update: moves the card immediately in the UI
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['kds-orders'] })
+      const prev = queryClient.getQueryData(['kds-orders'])
+      queryClient.setQueryData(['kds-orders'], (old: any) =>
+        Array.isArray(old) ? old.map(o => o.id === id ? { ...o, status } : o) : old
+      )
+      return { prev }
+    },
+    onError: (_err, _vars, ctx: any) => {
+      if (ctx?.prev) queryClient.setQueryData(['kds-orders'], ctx.prev)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['kds-orders'] }),
   })
 
   const arr: any[]   = Array.isArray(orders) ? orders : []

@@ -18,7 +18,8 @@ export default function EntregasPage() {
   const { data: deliveries, isLoading } = useQuery({
     queryKey: ['my-deliveries'],
     queryFn: () => get<any[]>('/api/delivery'),
-    refetchInterval: 20000,
+    refetchInterval: 8_000,
+    refetchOnWindowFocus: true,
   });
 
   useSocket(tenantId ? `drivers:${tenantId}` : undefined, {

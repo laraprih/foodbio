@@ -113,7 +113,8 @@ export default function PedidosPage() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders-full', dateFrom, dateTo],
     queryFn: () => get<any[]>(`/api/admin/orders?from=${dateFrom}&to=${dateTo}`),
-    refetchInterval: 15000,
+    refetchInterval: 8_000,
+    refetchOnWindowFocus: true,
   })
 
   useSocket(tenant?.id ? `admin:${tenant.id}` : undefined, {
@@ -124,11 +125,22 @@ export default function PedidosPage() {
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       patch(`/api/admin/orders/${id}`, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-orders-full', dateFrom, dateTo] })
-      toast.success('Pedido atualizado')
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-orders-full', dateFrom, dateTo] })
+      const prev = queryClient.getQueryData(['admin-orders-full', dateFrom, dateTo])
+      queryClient.setQueryData(['admin-orders-full', dateFrom, dateTo], (old: any) =>
+        Array.isArray(old) ? old.map((o: any) => o.id === id ? { ...o, status } : o) : old
+      )
+      return { prev }
     },
-    onError: () => toast.error('Erro ao atualizar pedido'),
+    onError: (_e, _v, ctx: any) => {
+      if (ctx?.prev) queryClient.setQueryData(['admin-orders-full', dateFrom, dateTo], ctx.prev)
+      toast.error('Erro ao atualizar pedido')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders-full', dateFrom, dateTo] })
+    },
+    onSuccess: () => toast.success('Pedido atualizado'),
   })
 
   const cancelOrder = useMutation({
