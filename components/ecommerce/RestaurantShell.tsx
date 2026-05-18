@@ -127,7 +127,7 @@ function ProductListItem({ product, onAdd }: { product: Product; onAdd: (id: str
 
 export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellProps) {
   const { setTenant } = useSessionStore();
-  const { addToCart, count: cartCount, cartSubtotal } = useCart();
+  const { addToCart, count: cartCount, cartSubtotal, items: cartItems } = useCart();
   const { data: session } = useSession();
   const customer = session?.user as any;
   const isLoggedIn = customer?.role === 'customer' && !!customer?.tenantId;
@@ -454,15 +454,21 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
       {cartCount > 0 && (
         <div className="fixed bottom-[60px] lg:bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.10)]">
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--color-lime-primary)] flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
-              {tenant.logoUrl ? (
-                <div className="w-full h-full relative">
-                  <StoreImage src={tenant.logoUrl} alt={tenant.name} fill className="object-cover" referrerPolicy="no-referrer" />
+            {/* Foto do último produto adicionado */}
+            {(() => {
+              const lastImg = cartItems[cartItems.length - 1]?.imageUrl;
+              return (
+                <div className="w-10 h-10 rounded-xl shrink-0 overflow-hidden shadow-sm bg-[var(--color-lime-primary)] flex items-center justify-center">
+                  {lastImg ? (
+                    <div className="w-full h-full relative">
+                      <StoreImage src={lastImg} alt="" fill className="object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                  ) : (
+                    <ShoppingBag className="w-5 h-5 text-white" />
+                  )}
                 </div>
-              ) : (
-                <ShoppingBag className="w-5 h-5 text-white" />
-              )}
-            </div>
+              );
+            })()}
             <div className="flex-1 min-w-0">
               <p className="text-[11px] text-gray-400 leading-tight">Total sem a entrega</p>
               <p className="font-black text-gray-900 text-sm leading-tight">

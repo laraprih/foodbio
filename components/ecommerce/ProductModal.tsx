@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { StoreImage } from '@/components/ui/StoreImage';
-import { X, Minus, Plus, ShoppingCart, ChefHat } from 'lucide-react';
+import { X, Minus, Plus, ShoppingCart, ChefHat, Loader2 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/Skeleton';
 
 interface Option {
   id: string;
@@ -107,11 +106,11 @@ export default function ProductModal({ product, slug, onClose, onAdd }: ProductM
         onClick={onClose}
       />
 
-      {/* Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-white rounded-t-3xl max-h-[92dvh] md:max-w-lg md:mx-auto md:left-0 md:right-0 md:rounded-3xl md:bottom-auto md:top-1/2 md:-translate-y-1/2 shadow-2xl animate-slide-up">
+      {/* Sheet — altura fixa no mobile evita o efeito elástico de crescer/encolher */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-white rounded-t-3xl h-[88dvh] md:h-auto md:max-h-[90dvh] md:max-w-lg md:mx-auto md:left-0 md:right-0 md:rounded-3xl md:bottom-auto md:top-1/2 md:-translate-y-1/2 shadow-2xl animate-slide-up">
 
-        {/* Image */}
-        <div className="relative w-full aspect-video rounded-t-3xl md:rounded-t-3xl overflow-hidden shrink-0 bg-gray-100">
+        {/* Image — altura fixa evita recalculo de layout ao abrir */}
+        <div className="relative w-full h-52 md:h-56 rounded-t-3xl overflow-hidden shrink-0 bg-gray-100">
           {product.imageUrl ? (
             <StoreImage
               src={product.imageUrl}
@@ -150,18 +149,8 @@ export default function ProductModal({ product, slug, onClose, onAdd }: ProductM
 
           {/* Option groups */}
           {loadingOptions ? (
-            <div className="mt-5 space-y-5">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="h-4 w-32" />
-                  {Array.from({ length: 3 }).map((_, j) => (
-                    <div key={j} className="flex items-center justify-between py-2">
-                      <Skeleton className="h-4 w-36" />
-                      <Skeleton className="h-4 w-14" />
-                    </div>
-                  ))}
-                </div>
-              ))}
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-5 h-5 text-gray-300 animate-spin" />
             </div>
           ) : (
             optionGroups.map((group) => {
