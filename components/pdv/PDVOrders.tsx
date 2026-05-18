@@ -1,10 +1,38 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ClipboardList, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { ClipboardList, ChevronDown, ChevronUp, X, Printer } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { PDVOrder } from './types'
 import { toast } from 'react-hot-toast'
+import { printKitchenTicket, printPDVReceipt } from '@/lib/pdv-print'
+
+function buildPrintData(order: PDVOrder, tenantName: string) {
+  return {
+    orderId: order.id,
+    tenantName,
+    items: order.items.map(i => ({
+      cartId: i.id,
+      productId: '',
+      name: i.name,
+      unitPrice: i.unitPrice,
+      basePrice: i.unitPrice,
+      quantity: i.quantity,
+      notes: i.notes ?? '',
+      options: [],
+    })),
+    subtotal: order.subtotal,
+    discountAmount: order.discount ?? 0,
+    deliveryFee: order.deliveryFee ?? 0,
+    total: order.total,
+    customerName: order.customerName ?? 'Balcão',
+    customerPhone: order.customerPhone ?? '',
+    orderType: order.type as any,
+    tableNumber: order.tableNumber ?? null,
+    payments: [{ method: (order.paymentMethod ?? 'cash') as any, amount: order.total }],
+    change: 0,
+  }
+}
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   pending:    { label: 'Pendente',    color: 'bg-gray-100 text-gray-600' },
@@ -24,7 +52,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 const FILTERS = ['Todos', 'Pendente', 'Preparando', 'Pronto', 'Entregue', 'Cancelado'] as const
 
-export function PDVOrders() {
+export function PDVOrders({ tenantName = '' }: { tenantName?: string }) {
   const qc = useQueryClient()
   const [filter, setFilter] = useState('Todos')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -155,6 +183,24 @@ export function PDVOrders() {
                     <div className="flex justify-between text-sm font-black text-gray-900">
                       <span>Total</span><span>R$ {order.total.toFixed(2)}</span>
                     </div>
+                  </div>
+
+                  {/* Reprint */}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => printPDVReceipt(buildPrintData(order, tenantName))}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      Cupom
+                    </button>
+                    <button
+                      onClick={() => printKitchenTicket(buildPrintData(order, tenantName))}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      Cozinha
+                    </button>
                   </div>
 
                   {/* Actions */}

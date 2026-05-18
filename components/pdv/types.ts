@@ -1,5 +1,22 @@
 export type PDVModule = 'catalog' | 'tables' | 'orders' | 'cash' | 'summary'
 
+export interface AddressState {
+  cep: string
+  street: string
+  number: string
+  complement: string
+  neighborhood: string
+  city: string
+  state: string
+}
+
+export interface CustomerSuggestion {
+  id: string
+  name: string
+  phone: string | null
+  email: string
+}
+
 export type OrderType = 'pickup' | 'delivery' | 'in_store'
 
 export type PaymentMethod = 'cash' | 'pix' | 'credit_card' | 'debit_card'

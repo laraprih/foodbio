@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
-  ShoppingCart, X, Plus, Minus, Percent,
-  DollarSign, Store, Truck, TableProperties,
-  Pencil, Check, ChevronDown,
+  ShoppingCart, X, Plus, Minus, Percent, DollarSign,
+  Store, Truck, TableProperties, Pencil, Check,
+  ChevronDown, MapPin, Loader2, User,
 } from 'lucide-react'
-import type { CartItem, Discount, OrderType, PDVTable } from './types'
+import type { CartItem, Discount, OrderType, PDVTable, AddressState, CustomerSuggestion } from './types'
 
 interface Props {
   cart: CartItem[]
@@ -23,6 +23,8 @@ interface Props {
   onSetCustomerName: (v: string) => void
   customerPhone: string
   onSetCustomerPhone: (v: string) => void
+  address: AddressState
+  onSetAddress: (a: AddressState) => void
   discount: Discount | null
   onSetDiscount: (d: Discount | null) => void
   deliveryFee: number
@@ -32,10 +34,23 @@ interface Props {
   cashSessionOpen: boolean
 }
 
+async function fetchCep(cep: string): Promise<Partial<AddressState> | null> {
+  const digits = cep.replace(/\D/g, '')
+  if (digits.length !== 8) return null
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+    if (!res.ok) return null
+    const d = await res.json()
+    if (d.erro) return null
+    return { street: d.logradouro ?? '', neighborhood: d.bairro ?? '', city: d.localidade ?? '', state: d.uf ?? '' }
+  } catch { return null }
+}
+
 export function PDVComanda({
   cart, onUpdateQty, onRemove, onUpdateNotes, onClear,
   orderType, onSetOrderType, selectedTableId, onSetTable, tables,
   customerName, onSetCustomerName, customerPhone, onSetCustomerPhone,
+  address, onSetAddress,
   discount, onSetDiscount, deliveryFee, subtotal, total, onCheckout, cashSessionOpen,
 }: Props) {
   const [editNoteId, setEditNoteId] = useState<string | null>(null)
@@ -44,11 +59,72 @@ export function PDVComanda({
   const [discountType, setDiscountType] = useState<'value' | 'pct'>('value')
   const [discountInput, setDiscountInput] = useState('')
   const [showTables, setShowTables] = useState(false)
+  const [loadingCep, setLoadingCep] = useState(false)
 
+  // ── Customer autocomplete ─────────────────────────────────────────────────
+  const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function handleNameChange(v: string) {
+    onSetCustomerName(v)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (v.length < 2) { setSuggestions([]); setShowSuggestions(false); return }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/pdv/customers?q=${encodeURIComponent(v)}`)
+        const data = await res.json()
+        setSuggestions(data.customers ?? [])
+        setShowSuggestions(true)
+      } catch { setSuggestions([]) }
+    }, 300)
+  }
+
+  function handlePhoneChange(v: string) {
+    onSetCustomerPhone(v)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (v.length < 2) { setSuggestions([]); setShowSuggestions(false); return }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/pdv/customers?q=${encodeURIComponent(v)}`)
+        const data = await res.json()
+        setSuggestions(data.customers ?? [])
+        setShowSuggestions(true)
+      } catch { setSuggestions([]) }
+    }, 300)
+  }
+
+  function selectCustomer(c: CustomerSuggestion) {
+    onSetCustomerName(c.name)
+    onSetCustomerPhone(c.phone ?? '')
+    setSuggestions([])
+    setShowSuggestions(false)
+  }
+
+  // ── CEP autocomplete ──────────────────────────────────────────────────────
+  async function handleCepBlur() {
+    const digits = address.cep.replace(/\D/g, '')
+    if (digits.length !== 8) return
+    setLoadingCep(true)
+    const data = await fetchCep(digits)
+    setLoadingCep(false)
+    if (data) onSetAddress({ ...address, ...data })
+  }
+
+  // ── Discount ──────────────────────────────────────────────────────────────
   const discountAmount = discount
-    ? discount.type === 'value'
-      ? Math.min(discount.amount, subtotal)
-      : subtotal * (discount.amount / 100)
+    ? discount.type === 'value' ? Math.min(discount.amount, subtotal) : subtotal * (discount.amount / 100)
     : 0
 
   function applyDiscount() {
@@ -58,11 +134,6 @@ export function PDVComanda({
     onSetDiscount({ type: discountType, amount: num })
     setShowDiscount(false)
     setDiscountInput('')
-  }
-
-  function startNoteEdit(item: CartItem) {
-    setEditNoteId(item.cartId)
-    setNoteValue(item.notes)
   }
 
   return (
@@ -138,23 +209,94 @@ export function PDVComanda({
         )}
       </div>
 
-      {/* Customer */}
+      {/* Customer with autocomplete */}
       <div className="px-5 py-3 border-b border-gray-100 space-y-2">
-        <input
-          type="text"
-          placeholder="Nome do cliente (opcional)"
-          value={customerName}
-          onChange={e => onSetCustomerName(e.target.value)}
-          className="w-full bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
-        />
-        <input
-          type="tel"
-          placeholder="Telefone (opcional)"
-          value={customerPhone}
-          onChange={e => onSetCustomerPhone(e.target.value)}
-          className="w-full bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
-        />
+        <div className="relative" ref={suggestionsRef}>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Nome do cliente"
+              value={customerName}
+              onChange={e => handleNameChange(e.target.value)}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              className="w-full bg-gray-50 rounded-xl border border-gray-200 pl-8 pr-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+            />
+          </div>
+          <input
+            type="tel"
+            placeholder="Telefone"
+            value={customerPhone}
+            onChange={e => handlePhoneChange(e.target.value)}
+            className="w-full bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute z-20 top-full mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden">
+              {suggestions.map(c => (
+                <button
+                  key={c.id}
+                  onMouseDown={() => selectCustomer(c)}
+                  className="w-full px-3 py-2.5 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                >
+                  <p className="text-sm font-bold text-gray-900">{c.name}</p>
+                  <p className="text-xs text-gray-400">{c.phone ?? c.email}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Delivery address */}
+      {orderType === 'delivery' && (
+        <div className="px-5 py-3 border-b border-gray-100 space-y-2">
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1">
+            <MapPin className="w-3 h-3" /> Endereço de entrega
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="CEP"
+              maxLength={9}
+              value={address.cep}
+              onChange={e => onSetAddress({ ...address, cep: e.target.value })}
+              onBlur={handleCepBlur}
+              className="flex-1 bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+            />
+            {loadingCep && <Loader2 className="w-4 h-4 animate-spin text-gray-400 shrink-0" />}
+          </div>
+          <input
+            type="text"
+            placeholder="Rua / Avenida"
+            value={address.street}
+            onChange={e => onSetAddress({ ...address, street: e.target.value })}
+            className="w-full bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+          />
+          <div className="grid grid-cols-5 gap-2">
+            <input
+              type="text"
+              placeholder="Nº"
+              value={address.number}
+              onChange={e => onSetAddress({ ...address, number: e.target.value })}
+              className="col-span-2 bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+            />
+            <input
+              type="text"
+              placeholder="Complemento"
+              value={address.complement}
+              onChange={e => onSetAddress({ ...address, complement: e.target.value })}
+              className="col-span-3 bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+            />
+          </div>
+          <input
+            type="text"
+            placeholder="Bairro"
+            value={address.neighborhood}
+            onChange={e => onSetAddress({ ...address, neighborhood: e.target.value })}
+            className="w-full bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+          />
+        </div>
+      )}
 
       {/* Cart items */}
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-3 space-y-2">
@@ -166,7 +308,6 @@ export function PDVComanda({
         ) : cart.map(item => (
           <div key={item.cartId} className="bg-gray-50 rounded-xl p-3 group">
             <div className="flex items-start gap-2">
-              {/* Qty stepper */}
               <div className="flex items-center gap-1 shrink-0 mt-0.5">
                 <button
                   onClick={() => onUpdateQty(item.cartId, item.quantity - 1)}
@@ -182,7 +323,6 @@ export function PDVComanda({
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
-
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-gray-900 leading-tight truncate">{item.name}</p>
                 {item.options.map(o => (
@@ -194,14 +334,13 @@ export function PDVComanda({
                   <p className="text-[10px] text-amber-600 italic mt-0.5">"{item.notes}"</p>
                 )}
               </div>
-
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <p className="text-xs font-black text-gray-900">
                   R$ {(item.unitPrice * item.quantity).toFixed(2)}
                 </p>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={() => startNoteEdit(item)}
+                    onClick={() => { setEditNoteId(item.cartId); setNoteValue(item.notes) }}
                     className="w-5 h-5 rounded-md bg-white border border-gray-200 flex items-center justify-center hover:bg-blue-50 transition-colors"
                   >
                     <Pencil className="w-2.5 h-2.5 text-gray-500" />
@@ -215,8 +354,6 @@ export function PDVComanda({
                 </div>
               </div>
             </div>
-
-            {/* Inline note editor */}
             {editNoteId === item.cartId && (
               <div className="mt-2 flex gap-2">
                 <input
@@ -224,7 +361,7 @@ export function PDVComanda({
                   type="text"
                   value={noteValue}
                   onChange={e => setNoteValue(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { onUpdateNotes(item.cartId, noteValue); setEditNoteId(null) } }}
+                  onKeyDown={e => { if (e.key === 'Enter') { onUpdateNotes(item.cartId, noteValue); setEditNoteId(null) } if (e.key === 'Escape') setEditNoteId(null) }}
                   placeholder="Observação..."
                   className="flex-1 bg-white rounded-lg border border-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-lime-primary)]"
                 />
@@ -240,24 +377,14 @@ export function PDVComanda({
         ))}
       </div>
 
-      {/* Discount section */}
+      {/* Discount */}
       {cart.length > 0 && (
         <div className="px-5 pb-2 border-t border-gray-100 pt-3">
           {showDiscount ? (
             <div className="flex gap-2">
               <div className="flex rounded-xl border border-gray-200 overflow-hidden shrink-0">
-                <button
-                  onClick={() => setDiscountType('value')}
-                  className={`px-2 py-1.5 text-xs font-bold transition-colors ${discountType === 'value' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-                >
-                  R$
-                </button>
-                <button
-                  onClick={() => setDiscountType('pct')}
-                  className={`px-2 py-1.5 text-xs font-bold transition-colors ${discountType === 'pct' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-                >
-                  %
-                </button>
+                <button onClick={() => setDiscountType('value')} className={`px-2 py-1.5 text-xs font-bold transition-colors ${discountType === 'value' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>R$</button>
+                <button onClick={() => setDiscountType('pct')} className={`px-2 py-1.5 text-xs font-bold transition-colors ${discountType === 'pct' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>%</button>
               </div>
               <input
                 autoFocus
@@ -268,60 +395,43 @@ export function PDVComanda({
                 placeholder={discountType === 'value' ? '0,00' : '0'}
                 className="flex-1 bg-gray-50 rounded-xl border border-gray-200 px-3 py-1.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
               />
-              <button onClick={applyDiscount} className="px-3 py-1.5 bg-green-500 text-white rounded-xl text-xs font-bold">
-                OK
-              </button>
-              <button onClick={() => { setShowDiscount(false); onSetDiscount(null) }} className="px-2 py-1.5 text-gray-400 hover:text-gray-600">
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={applyDiscount} className="px-3 py-1.5 bg-green-500 text-white rounded-xl text-xs font-bold">OK</button>
+              <button onClick={() => { setShowDiscount(false); onSetDiscount(null) }} className="px-2 py-1.5 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
             </div>
           ) : (
-            <button
-              onClick={() => setShowDiscount(true)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors"
-            >
+            <button onClick={() => setShowDiscount(true)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors">
               {discount ? (
                 <>
                   <Percent className="w-3.5 h-3.5 text-green-500" />
-                  <span className="text-green-600">
-                    Desconto: {discount.type === 'pct' ? `${discount.amount}%` : `R$ ${discount.amount.toFixed(2)}`}
-                  </span>
-                  <span className="text-green-600">(-R$ {discountAmount.toFixed(2)})</span>
+                  <span className="text-green-600">Desconto: {discount.type === 'pct' ? `${discount.amount}%` : `R$ ${discount.amount.toFixed(2)}`} (-R$ {discountAmount.toFixed(2)})</span>
                 </>
               ) : (
-                <>
-                  <DollarSign className="w-3.5 h-3.5" />
-                  Aplicar desconto
-                </>
+                <><DollarSign className="w-3.5 h-3.5" />Aplicar desconto</>
               )}
             </button>
           )}
         </div>
       )}
 
-      {/* Totals + actions */}
+      {/* Footer totals */}
       <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 space-y-1.5 shrink-0">
         <div className="flex justify-between text-xs text-gray-500 font-semibold">
-          <span>Subtotal</span>
-          <span>R$ {subtotal.toFixed(2)}</span>
+          <span>Subtotal</span><span>R$ {subtotal.toFixed(2)}</span>
         </div>
         {discountAmount > 0 && (
           <div className="flex justify-between text-xs text-green-600 font-bold">
-            <span>Desconto</span>
-            <span>-R$ {discountAmount.toFixed(2)}</span>
+            <span>Desconto</span><span>-R$ {discountAmount.toFixed(2)}</span>
           </div>
         )}
         {deliveryFee > 0 && orderType === 'delivery' && (
           <div className="flex justify-between text-xs text-gray-500 font-semibold">
-            <span>Taxa de entrega</span>
-            <span>R$ {deliveryFee.toFixed(2)}</span>
+            <span>Taxa de entrega</span><span>R$ {deliveryFee.toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between items-center pt-1 border-t border-gray-200">
           <span className="text-xs font-black text-gray-900 uppercase tracking-wide">Total</span>
           <span className="text-2xl font-black text-gray-900">R$ {total.toFixed(2)}</span>
         </div>
-
         <div className="grid grid-cols-2 gap-2 pt-1">
           <button
             onClick={onClear}
