@@ -1,82 +1,141 @@
-const GRAPH_API = 'https://graph.facebook.com/v21.0'
+/**
+ * Serviço de envio de WhatsApp via número próprio da empresa.
+ *
+ * Suporta dois provedores (configure via WHATSAPP_PROVIDER):
+ *   "zapi"      → Z-API SaaS (z-api.io) — plano pago, sem servidor
+ *   "evolution" → Evolution API self-hosted no VPS — gratuito
+ *
+ * O provedor é detectado automaticamente pelas variáveis presentes:
+ *   Z-API:     ZAPI_INSTANCE_ID + ZAPI_INSTANCE_TOKEN + ZAPI_CLIENT_TOKEN
+ *   Evolution: EVOLUTION_URL + EVOLUTION_INSTANCE + EVOLUTION_API_KEY
+ */
 
-function cfg() {
-  const token   = process.env.WHATSAPP_TOKEN
-  const phoneId = process.env.WHATSAPP_PHONE_ID
-  if (!token || !phoneId) return null
-  return { token, phoneId }
-}
-
-/** Normaliza para E.164 sem '+': ex. "5511999999999" */
+/** Normaliza qualquer formato de telefone para E.164 sem '+': 5585996975158 */
 export function normalizeWhatsAppPhone(phone: string): string {
   const d = phone.replace(/\D/g, '')
+  // Já tem código do Brasil (55) e tamanho correto
   if (d.startsWith('55') && (d.length === 12 || d.length === 13)) return d
-  if (d.length === 11 || d.length === 10) return `55${d}`
+  // Número brasileiro sem DDI: DDD (2) + número (8 ou 9) = 10 ou 11 dígitos
+  if (d.length === 10 || d.length === 11) return `55${d}`
   return d
 }
 
-async function postMessage(phoneId: string, token: string, payload: object): Promise<boolean> {
+// ─── Z-API ───────────────────────────────────────────────────────────────────
+// Docs: https://developer.z-api.io/en/message/send-message-text
+// Credenciais: instanceId, instanceToken (na URL) + clientToken (header)
+
+async function sendViaZapi(phone: string, message: string): Promise<boolean> {
+  const instanceId    = process.env.ZAPI_INSTANCE_ID
+  const instanceToken = process.env.ZAPI_INSTANCE_TOKEN
+  const clientToken   = process.env.ZAPI_CLIENT_TOKEN
+
+  if (!instanceId || !instanceToken || !clientToken) {
+    console.warn('[whatsapp/zapi] variáveis ZAPI_INSTANCE_ID / ZAPI_INSTANCE_TOKEN / ZAPI_CLIENT_TOKEN não configuradas')
+    return false
+  }
+
+  const url = `https://api.z-api.io/instances/${instanceId}/token/${instanceToken}/send-text`
+
   try {
-    const res = await fetch(`${GRAPH_API}/${phoneId}/messages`, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'Client-Token': clientToken,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ phone: normalizeWhatsAppPhone(phone), message }),
       signal: AbortSignal.timeout(12_000),
     })
+
     if (!res.ok) {
       const body = await res.text()
-      console.error(`[whatsapp] send failed (${res.status}):`, body)
+      console.error(`[whatsapp/zapi] erro ${res.status}:`, body)
       return false
     }
     return true
   } catch (e) {
-    console.error('[whatsapp] send error:', e)
+    console.error('[whatsapp/zapi] falha na requisição:', e)
     return false
   }
 }
 
-export async function sendWhatsAppText(to: string, text: string): Promise<boolean> {
-  const c = cfg()
-  if (!c) { console.warn('[whatsapp] WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID não configurados'); return false }
-  return postMessage(c.phoneId, c.token, {
-    messaging_product: 'whatsapp',
-    to: normalizeWhatsAppPhone(to),
-    type: 'text',
-    text: { body: text, preview_url: false },
-  })
-}
+// ─── Evolution API ───────────────────────────────────────────────────────────
+// Docs: https://doc.evolution-api.com/v2/api-reference/message-controller/send-text
+// Instalar no VPS: docker run -d -p 8080:8080 -e AUTHENTICATION_API_KEY=... atendai/evolution-api:latest
 
-export async function sendWhatsAppTemplate(
-  to: string,
-  name: string,
-  languageCode: string,
-  components: object[]
-): Promise<boolean> {
-  const c = cfg()
-  if (!c) return false
-  return postMessage(c.phoneId, c.token, {
-    messaging_product: 'whatsapp',
-    to: normalizeWhatsAppPhone(to),
-    type: 'template',
-    template: { name, language: { code: languageCode }, components },
-  })
-}
+async function sendViaEvolution(phone: string, message: string): Promise<boolean> {
+  const baseUrl      = (process.env.EVOLUTION_URL ?? '').replace(/\/$/, '')
+  const instanceName = process.env.EVOLUTION_INSTANCE
+  const apiKey       = process.env.EVOLUTION_API_KEY
 
-export async function sendVerificationCode(to: string, code: string): Promise<boolean> {
-  const tpl = process.env.WHATSAPP_VERIFY_TEMPLATE
-  if (tpl) {
-    return sendWhatsAppTemplate(to, tpl, 'pt_BR', [
-      { type: 'body', parameters: [{ type: 'text', text: code }] },
-    ])
+  if (!baseUrl || !instanceName || !apiKey) {
+    console.warn('[whatsapp/evolution] variáveis EVOLUTION_URL / EVOLUTION_INSTANCE / EVOLUTION_API_KEY não configuradas')
+    return false
   }
-  // Fallback: mensagem de texto (funciona dentro da janela de 24h ou em sandbox)
-  return sendWhatsAppText(
-    to,
-    `🔐 *Código de verificação*\n\nSeu código é: *${code}*\n\nVálido por 10 minutos. Não compartilhe com ninguém.`
-  )
+
+  const url = `${baseUrl}/message/sendText/${instanceName}`
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey,
+      },
+      body: JSON.stringify({
+        number: normalizeWhatsAppPhone(phone),
+        text: message,
+      }),
+      signal: AbortSignal.timeout(12_000),
+    })
+
+    if (!res.ok) {
+      const body = await res.text()
+      console.error(`[whatsapp/evolution] erro ${res.status}:`, body)
+      return false
+    }
+    return true
+  } catch (e) {
+    console.error('[whatsapp/evolution] falha na requisição:', e)
+    return false
+  }
+}
+
+// ─── Dispatcher ──────────────────────────────────────────────────────────────
+
+function detectProvider(): 'zapi' | 'evolution' | null {
+  const explicit = process.env.WHATSAPP_PROVIDER
+  if (explicit === 'zapi' || explicit === 'evolution') return explicit
+
+  // Auto-detecta pelo que está configurado
+  if (process.env.ZAPI_INSTANCE_ID)    return 'zapi'
+  if (process.env.EVOLUTION_URL)       return 'evolution'
+
+  return null
+}
+
+export async function sendWhatsAppMessage(phone: string, message: string): Promise<boolean> {
+  const provider = detectProvider()
+
+  if (!provider) {
+    console.warn('[whatsapp] nenhum provedor configurado. Configure ZAPI_* ou EVOLUTION_*')
+    return false
+  }
+
+  if (provider === 'zapi')      return sendViaZapi(phone, message)
+  if (provider === 'evolution') return sendViaEvolution(phone, message)
+  return false
+}
+
+// ─── Mensagens prontas ────────────────────────────────────────────────────────
+
+export async function sendVerificationCode(phone: string, code: string): Promise<boolean> {
+  const message =
+    `🔐 *Código de verificação*\n\n` +
+    `Seu código é: *${code}*\n\n` +
+    `Válido por 10 minutos. Não compartilhe este código.`
+
+  return sendWhatsAppMessage(phone, message)
 }
 
 export async function sendOrderConfirmation(opts: {
@@ -92,23 +151,12 @@ export async function sendOrderConfirmation(opts: {
   const link   = `${appUrl}/${slug}/pedido/${orderId}`
   const name   = customerName?.trim() || 'Cliente'
 
-  const tpl = process.env.WHATSAPP_ORDER_TEMPLATE
-  if (tpl) {
-    return sendWhatsAppTemplate(phone, tpl, 'pt_BR', [
-      {
-        type: 'body',
-        parameters: [
-          { type: 'text', text: name },
-          { type: 'text', text: orderCode },
-          { type: 'text', text: tenantName },
-          { type: 'text', text: link },
-        ],
-      },
-    ])
-  }
+  const message =
+    `✅ *Pedido confirmado!*\n\n` +
+    `Olá, ${name}! Seu pagamento foi aprovado.\n\n` +
+    `🆔 Pedido: *#${orderCode}*\n` +
+    `🍽️ *${tenantName}*\n\n` +
+    `📍 *Acompanhe em tempo real:*\n${link}`
 
-  return sendWhatsAppText(
-    phone,
-    `✅ *Pedido confirmado!*\n\nOlá, ${name}! Seu pagamento foi aprovado.\n\n🆔 Pedido: *#${orderCode}*\n🍽️ *${tenantName}*\n\n📍 Acompanhe em tempo real:\n${link}`
-  )
+  return sendWhatsAppMessage(phone, message)
 }
