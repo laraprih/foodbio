@@ -19,13 +19,8 @@ interface Tenant {
   name: string;
   logoUrl?: string;
   logoFormat?: string;
-  coverUrl?: string | null;
-  showHeroLogo?: boolean | null;
   address?: string | null;
   gateway: 'mercadopago' | 'pagbank' | null;
-  minOrderValue?: number | null;
-  deliveryFee?: number | null;
-  deliveryRadius?: number | null;
 }
 
 interface Product {
@@ -116,16 +111,11 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
         restaurantName={tenant.name}
         restaurantLogo={tenant.logoUrl}
         logoFormat={tenant.logoFormat}
-        coverUrl={tenant.coverUrl ?? undefined}
-        showHeroLogo={tenant.showHeroLogo ?? true}
         location={tenant.address ?? undefined}
         onSearch={setSearchQuery}
         searchValue={searchQuery}
         cartCount={cartCount}
         slug={slug}
-        minOrderValue={tenant.minOrderValue ?? undefined}
-        deliveryFee={tenant.deliveryFee ?? undefined}
-        deliveryRadius={tenant.deliveryRadius ?? undefined}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28 lg:pb-12">

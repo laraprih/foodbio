@@ -4,7 +4,7 @@ export async function getTenantBySlugDirect(slug: string) {
   const pool = getPool()
   const { rows } = await pool.query(
     `SELECT id, name, slug, phone, address, city, state,
-            "logoUrl", "logoFormat", "coverUrl", "showHeroLogo", "deliveryFee",
+            "logoUrl", "logoFormat", "coverUrl", "deliveryFee",
             "minOrderValue", "deliveryRadius", "openingHours", active
      FROM "Tenant"
      WHERE slug = $1 AND active = true`,
