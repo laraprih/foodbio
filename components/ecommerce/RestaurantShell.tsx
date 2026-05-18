@@ -20,6 +20,7 @@ interface Tenant {
   logoUrl?: string;
   logoFormat?: string;
   coverUrl?: string | null;
+  showHeroLogo?: boolean | null;
   address?: string | null;
   gateway: 'mercadopago' | 'pagbank' | null;
   minOrderValue?: number | null;
@@ -116,6 +117,7 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
         restaurantLogo={tenant.logoUrl}
         logoFormat={tenant.logoFormat}
         coverUrl={tenant.coverUrl ?? undefined}
+        showHeroLogo={tenant.showHeroLogo ?? true}
         location={tenant.address ?? undefined}
         onSearch={setSearchQuery}
         searchValue={searchQuery}

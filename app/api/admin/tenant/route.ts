@@ -19,7 +19,7 @@ export async function GET() {
   const pool = getPool()
   const { rows } = await pool.query(
     `SELECT t.id, t.name, t.slug, t.phone, t.address, t.city, t.state,
-            t."logoUrl", t."logoFormat", t."coverUrl",
+            t."logoUrl", t."logoFormat", t."coverUrl", t."showHeroLogo",
             t."deliveryFee", t."minOrderValue", t."deliveryRadius",
             tpa.gateway, tpa."accessToken" AS "mpAccessToken"
      FROM "Tenant" t
@@ -42,6 +42,7 @@ export async function GET() {
     logoUrl: row.logoUrl,
     logoFormat: row.logoFormat ?? 'square',
     coverUrl: row.coverUrl,
+    showHeroLogo: row.showHeroLogo ?? true,
     deliveryFee: row.deliveryFee,
     minOrderValue: row.minOrderValue,
     deliveryRadius: row.deliveryRadius,
@@ -60,7 +61,7 @@ export async function PATCH(req: NextRequest) {
 
   const {
     name, phone, address, city, state,
-    logoUrl, logoFormat, coverUrl,
+    logoUrl, logoFormat, coverUrl, showHeroLogo,
     deliveryFee, minOrderValue, deliveryRadius,
     mpAccessToken,
   } = body
@@ -76,14 +77,16 @@ export async function PATCH(req: NextRequest) {
        "logoUrl" = $6,
        "logoFormat" = COALESCE($7, "logoFormat"),
        "coverUrl" = $8,
-       "deliveryFee" = COALESCE($9, "deliveryFee"),
-       "minOrderValue" = COALESCE($10, "minOrderValue"),
-       "deliveryRadius" = COALESCE($11, "deliveryRadius"),
+       "showHeroLogo" = COALESCE($9, "showHeroLogo"),
+       "deliveryFee" = COALESCE($10, "deliveryFee"),
+       "minOrderValue" = COALESCE($11, "minOrderValue"),
+       "deliveryRadius" = COALESCE($12, "deliveryRadius"),
        "updatedAt" = NOW()
-     WHERE id = $12`,
+     WHERE id = $13`,
     [
       name || null, phone || null, address || null, city || null, state || null,
       logoUrl || null, logoFormat || null, coverUrl || null,
+      showHeroLogo != null ? Boolean(showHeroLogo) : null,
       deliveryFee != null ? Number(deliveryFee) : null,
       minOrderValue != null ? Number(minOrderValue) : null,
       deliveryRadius != null ? Number(deliveryRadius) : null,

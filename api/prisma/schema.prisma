@@ -20,6 +20,7 @@ model Tenant {
   logoUrl        String?
   logoFormat     String   @default("square") // "square" | "wide"
   coverUrl       String?
+  showHeroLogo   Boolean  @default(true)
   openingHours   Json?
   deliveryRadius Float    @default(5.0)
   deliveryFee    Float    @default(0.0)

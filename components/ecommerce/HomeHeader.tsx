@@ -4,12 +4,14 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Search, MapPin, ShoppingBag, Star, Bike, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface HomeHeaderProps {
   restaurantName: string;
   restaurantLogo?: string;
   logoFormat?: string;
   coverUrl?: string;
+  showHeroLogo?: boolean;
   location?: string;
   onSearch?: (query: string) => void;
   searchValue?: string;
@@ -31,6 +33,7 @@ export default function HomeHeader({
   restaurantLogo,
   logoFormat = 'square',
   coverUrl,
+  showHeroLogo = true,
   location,
   onSearch,
   searchValue,
@@ -141,16 +144,18 @@ export default function HomeHeader({
         {/* Banner com logo sobreposto */}
         <div className="relative h-36 w-full flex items-end justify-center" style={bannerStyle}>
           {coverUrl && <div className="absolute inset-0 bg-black/20" />}
-          {/* Logo circular centralizado, sobrepondo o início do card */}
-          <div className="relative z-20 translate-y-9">
-            <div className="w-[72px] h-[72px] rounded-full border-[3px] border-white overflow-hidden bg-white shadow-md">
-              {logoContent}
+          {/* Logo circular — exibida apenas quando showHeroLogo = true */}
+          {showHeroLogo && (
+            <div className="relative z-20 translate-y-9">
+              <div className="w-[72px] h-[72px] rounded-full border-[3px] border-white overflow-hidden bg-white shadow-md">
+                {logoContent}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Card de informações */}
-        <div className="bg-white rounded-t-3xl -mt-5 pt-14 px-4 pb-1 relative shadow-sm">
+        <div className={cn('bg-white rounded-t-3xl -mt-5 px-4 pb-1 relative shadow-sm', showHeroLogo ? 'pt-14' : 'pt-6')}>
           {/* Nome + chevron */}
           <div className="flex items-start justify-between gap-2 mb-1">
             <h2 className="text-[18px] font-bold text-gray-900 leading-snug flex-1">

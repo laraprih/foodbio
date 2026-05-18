@@ -15,6 +15,7 @@ interface Tenant {
   id: string; name: string; slug: string; phone?: string
   address?: string; city?: string; state?: string
   logoUrl?: string; logoFormat: string; coverUrl?: string
+  showHeroLogo: boolean
   deliveryFee: number; minOrderValue: number; deliveryRadius: number
   gateway?: string | null; mpAccessToken?: string | null
 }
@@ -166,6 +167,7 @@ export default function ConfiguracoesPage() {
   const [form, setForm] = useState({
     name: '', phone: '', address: '', city: '', state: '',
     logoUrl: '', logoFormat: 'square', coverUrl: '',
+    showHeroLogo: true,
     deliveryFee: '', minOrderValue: '', deliveryRadius: '',
     mpAccessToken: '',
   })
@@ -181,6 +183,7 @@ export default function ConfiguracoesPage() {
         logoUrl: tenant.logoUrl ?? '',
         logoFormat: tenant.logoFormat ?? 'square',
         coverUrl: tenant.coverUrl ?? '',
+        showHeroLogo: tenant.showHeroLogo ?? true,
         deliveryFee: String(tenant.deliveryFee ?? 0),
         minOrderValue: String(tenant.minOrderValue ?? 0),
         deliveryRadius: String(tenant.deliveryRadius ?? 5),
@@ -199,6 +202,7 @@ export default function ConfiguracoesPage() {
       logoUrl: form.logoUrl || null,
       logoFormat: form.logoFormat,
       coverUrl: form.coverUrl || null,
+      showHeroLogo: form.showHeroLogo,
       deliveryFee: Number(form.deliveryFee),
       minOrderValue: Number(form.minOrderValue),
       deliveryRadius: Number(form.deliveryRadius),
@@ -211,9 +215,11 @@ export default function ConfiguracoesPage() {
     onError: () => toast.error('Erro ao salvar'),
   })
 
-  const set = (key: keyof typeof form) => (val: string) => setForm((f) => ({ ...f, [key]: val }))
+  type StringKey = { [K in keyof typeof form]: (typeof form)[K] extends string ? K : never }[keyof typeof form]
 
-  const field = (label: string, key: keyof typeof form, opts?: { placeholder?: string; type?: string }) => (
+  const set = (key: StringKey) => (val: string) => setForm((f) => ({ ...f, [key]: val }))
+
+  const field = (label: string, key: StringKey, opts?: { placeholder?: string; type?: string }) => (
     <div>
       <label className="block text-sm font-bold text-gray-700 mb-1.5">{label}</label>
       <input
@@ -260,6 +266,31 @@ export default function ConfiguracoesPage() {
           <ImageUploader label="Logo da loja" value={form.logoUrl} onChange={set('logoUrl')} aspect="square" />
           <LogoFormatPicker value={form.logoFormat} onChange={set('logoFormat')} logoUrl={form.logoUrl} />
           <ImageUploader label="Imagem de capa" value={form.coverUrl} onChange={set('coverUrl')} aspect="wide" />
+
+          {/* Toggle: exibir logo circular no card mobile */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Logo circular no card da loja (mobile)</label>
+            <button
+              type="button"
+              onClick={() => setForm(f => ({ ...f, showHeroLogo: !f.showHeroLogo }))}
+              className={cn(
+                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none',
+                form.showHeroLogo ? 'bg-[var(--color-lime-primary)]' : 'bg-gray-200'
+              )}
+            >
+              <span
+                className={cn(
+                  'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                  form.showHeroLogo ? 'translate-x-6' : 'translate-x-1'
+                )}
+              />
+            </button>
+            <p className="text-xs text-gray-400 mt-1.5">
+              {form.showHeroLogo
+                ? 'Logo exibida em círculo sobre o banner. Recomendado para logos quadradas ou com símbolo.'
+                : 'Logo oculta. Use quando a logo for retangular ou horizontal e não ficar bem em formato circular.'}
+            </p>
+          </div>
         </section>
 
         {/* Informações básicas */}
