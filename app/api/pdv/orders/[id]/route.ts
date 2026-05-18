@@ -6,13 +6,13 @@ const VALID_STATUSES = ['confirmed', 'preparing', 'ready', 'dispatched', 'delive
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getPDVSession(req)
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const pool = getPool()
-  const { id } = params
+  const { id } = await params
   const { status, cancelReason } = await req.json()
 
   if (!VALID_STATUSES.includes(status)) {
@@ -36,10 +36,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 })
     }
 
-    // Free table if order is delivered/cancelled and table is occupied
     const tableId = rows[0].tableId
     if (tableId && ['delivered', 'cancelled'].includes(status)) {
-      // Check if there are other open orders for this table
       const { rows: openOrders } = await client.query(
         `SELECT id FROM "Order"
          WHERE "tableId" = $1 AND status NOT IN ('delivered','cancelled') AND id != $2`,

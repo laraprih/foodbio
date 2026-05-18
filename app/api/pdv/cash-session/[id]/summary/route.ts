@@ -6,13 +6,13 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getPDVSession(req)
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const pool = getPool()
-  const { id } = params
+  const { id } = await params
 
   const [{ rows: sessionRows }, { rows: orderRows }, { rows: movementRows }] = await Promise.all([
     pool.query(

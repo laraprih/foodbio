@@ -4,13 +4,13 @@ import { getPDVSession } from '@/lib/pdv-auth'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getPDVSession(req)
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const pool = getPool()
-  const { id } = params
+  const { id } = await params
   const body = await req.json()
 
   const allowed = ['status', 'capacity', 'label', 'active']
@@ -40,17 +40,18 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getPDVSession(req)
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const pool = getPool()
+  const { id } = await params
   const { rows } = await pool.query(
     `UPDATE "Table" SET active = false
      WHERE id = $1 AND "tenantId" = $2
      RETURNING id`,
-    [params.id, session.tenantId]
+    [id, session.tenantId]
   )
 
   if (!rows.length) return NextResponse.json({ error: 'Mesa não encontrada' }, { status: 404 })
