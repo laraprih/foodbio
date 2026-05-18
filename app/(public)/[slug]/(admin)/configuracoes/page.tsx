@@ -104,10 +104,10 @@ function ImageUploader({
   )
 }
 
-function LogoFormatPicker({ value, onChange, logoUrl }: { value: string; onChange: (v: string) => void; logoUrl: string }) {
+function LogoFormatPicker({ value, onChange, logoUrl, restaurantName }: { value: string; onChange: (v: string) => void; logoUrl: string; restaurantName: string }) {
   const formats = [
     {
-      id: 'square', label: 'Quadrado', description: 'Ícone compacto — ideal para logos com símbolo',
+      id: 'square', label: 'Quadrado', description: 'Ícone + nome da loja — ideal para logos com símbolo',
       preview: (
         <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-3 py-2 w-fit">
           <div className="w-10 h-10 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0 relative">
@@ -115,7 +115,9 @@ function LogoFormatPicker({ value, onChange, logoUrl }: { value: string; onChang
               ? <Image src={logoUrl} alt="preview" fill className="object-cover" referrerPolicy="no-referrer" unoptimized={logoUrl.startsWith('data:')} />
               : <div className="w-full h-full bg-[var(--color-lime-primary)] rounded-xl flex items-center justify-center"><span className="text-white font-black text-sm">F</span></div>}
           </div>
-          <div className="w-20 h-2.5 bg-gray-200 rounded-full" />
+          <span className="font-black text-gray-900 text-sm line-clamp-1 max-w-[120px]">
+            {restaurantName || 'Nome da loja'}
+          </span>
         </div>
       ),
     },
@@ -258,7 +260,7 @@ export default function ConfiguracoesPage() {
         <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
           <h2 className="font-black text-gray-900">Identidade visual</h2>
           <ImageUploader label="Logo da loja" value={form.logoUrl} onChange={set('logoUrl')} aspect="square" />
-          <LogoFormatPicker value={form.logoFormat} onChange={set('logoFormat')} logoUrl={form.logoUrl} />
+          <LogoFormatPicker value={form.logoFormat} onChange={set('logoFormat')} logoUrl={form.logoUrl} restaurantName={form.name} />
           <ImageUploader label="Imagem de capa" value={form.coverUrl} onChange={set('coverUrl')} aspect="wide" />
         </section>
 

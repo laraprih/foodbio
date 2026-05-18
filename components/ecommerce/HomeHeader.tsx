@@ -69,7 +69,7 @@ export default function HomeHeader({
                 </div>
               )}
               {logoFormat !== 'wide' && (
-                <span className="font-black text-gray-900 text-base hidden sm:block line-clamp-1 max-w-[140px]">
+                <span className="font-black text-gray-900 text-base line-clamp-1 max-w-[160px]">
                   {restaurantName}
                 </span>
               )}
