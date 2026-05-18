@@ -50,8 +50,7 @@ export default function ProductModal({ product, slug, onClose, onAdd }: ProductM
     setOptionGroups([]);
     setLoadingOptions(true);
 
-    const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-    fetch(`${API}/api/store/${slug}/products/${product.id}`)
+    fetch(`/api/store/${slug}/products/${product.id}`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (data?.optionGroups) setOptionGroups(data.optionGroups);

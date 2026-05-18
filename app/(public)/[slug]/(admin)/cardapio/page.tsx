@@ -131,6 +131,431 @@ function ImageInput({ value, onChange }: { value: string; onChange: (url: string
   )
 }
 
+// ── OptionGroupsEditor ────────────────────────────────────────────────────────
+
+interface AdminOption {
+  id: string
+  groupId: string
+  name: string
+  priceModifier: number
+  available: boolean
+}
+
+interface AdminOptionGroup {
+  id: string
+  name: string
+  required: boolean
+  maxChoices: number
+  minChoices: number
+  options: AdminOption[]
+}
+
+const EMPTY_GROUP_FORM = { name: '', required: false, maxChoices: 1, minChoices: 0 }
+const EMPTY_OPTION_FORM = { name: '', priceModifier: '' }
+
+function OptionGroupsEditor({ productId }: { productId: string }) {
+  const queryClient = useQueryClient()
+
+  // Group form
+  const [showGroupForm, setShowGroupForm] = useState(false)
+  const [groupForm, setGroupForm] = useState(EMPTY_GROUP_FORM)
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
+
+  // Option forms: keyed by groupId
+  const [showOptionForm, setShowOptionForm] = useState<Record<string, boolean>>({})
+  const [optionForm, setOptionForm] = useState<Record<string, { name: string; priceModifier: string }>>({})
+  const [editingOptionId, setEditingOptionId] = useState<string | null>(null)
+  const [editingOptionGroupId, setEditingOptionGroupId] = useState<string | null>(null)
+
+  const qKey = ['option-groups', productId]
+
+  const { data: groups = [], isLoading } = useQuery<AdminOptionGroup[]>({
+    queryKey: qKey,
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/menu/products/${productId}/option-groups`)
+      if (!res.ok) throw new Error('Erro ao carregar adicionais')
+      return res.json()
+    },
+  })
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: qKey })
+
+  // ── Group mutations ──────────────────────────────────────────────────────────
+  const createGroup = useMutation({
+    mutationFn: (data: typeof EMPTY_GROUP_FORM) =>
+      post(`/api/admin/menu/products/${productId}/option-groups`, data),
+    onSuccess: () => { invalidate(); setShowGroupForm(false); setGroupForm(EMPTY_GROUP_FORM); toast.success('Grupo criado!') },
+    onError: () => toast.error('Erro ao criar grupo'),
+  })
+
+  const updateGroup = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<typeof EMPTY_GROUP_FORM> }) =>
+      patch(`/api/admin/menu/option-groups/${id}`, data),
+    onSuccess: () => { invalidate(); setEditingGroupId(null); setShowGroupForm(false); setGroupForm(EMPTY_GROUP_FORM); toast.success('Grupo atualizado!') },
+    onError: () => toast.error('Erro ao atualizar grupo'),
+  })
+
+  const deleteGroup = useMutation({
+    mutationFn: (id: string) => del(`/api/admin/menu/option-groups/${id}`),
+    onSuccess: () => { invalidate(); toast.success('Grupo removido') },
+    onError: () => toast.error('Erro ao remover grupo'),
+  })
+
+  // ── Option mutations ─────────────────────────────────────────────────────────
+  const createOption = useMutation({
+    mutationFn: ({ groupId, data }: { groupId: string; data: { name: string; priceModifier: number } }) =>
+      post(`/api/admin/menu/option-groups/${groupId}/options`, data),
+    onSuccess: (_res, vars) => {
+      invalidate()
+      setShowOptionForm((prev) => ({ ...prev, [vars.groupId]: false }))
+      setOptionForm((prev) => ({ ...prev, [vars.groupId]: EMPTY_OPTION_FORM }))
+      toast.success('Opção criada!')
+    },
+    onError: () => toast.error('Erro ao criar opção'),
+  })
+
+  const updateOption = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; priceModifier?: number; available?: boolean } }) =>
+      patch(`/api/admin/menu/options/${id}`, data),
+    onSuccess: () => {
+      invalidate()
+      setEditingOptionId(null)
+      setEditingOptionGroupId(null)
+      toast.success('Opção atualizada!')
+    },
+    onError: () => toast.error('Erro ao atualizar opção'),
+  })
+
+  const deleteOption = useMutation({
+    mutationFn: (id: string) => del(`/api/admin/menu/options/${id}`),
+    onSuccess: () => { invalidate(); toast.success('Opção removida') },
+    onError: (e: unknown) => {
+      const msg = (e as { message?: string })?.message ?? 'Erro ao remover opção'
+      toast.error(msg)
+    },
+  })
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  const openEditGroup = (g: AdminOptionGroup) => {
+    setGroupForm({ name: g.name, required: g.required, maxChoices: g.maxChoices, minChoices: g.minChoices })
+    setEditingGroupId(g.id)
+    setShowGroupForm(true)
+  }
+
+  const openEditOption = (opt: AdminOption, groupId: string) => {
+    setOptionForm((prev) => ({
+      ...prev,
+      [groupId]: { name: opt.name, priceModifier: String(opt.priceModifier) },
+    }))
+    setEditingOptionId(opt.id)
+    setEditingOptionGroupId(groupId)
+    setShowOptionForm((prev) => ({ ...prev, [groupId]: true }))
+  }
+
+  const submitGroup = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!groupForm.name.trim()) { toast.error('Nome obrigatório'); return }
+    if (editingGroupId) {
+      updateGroup.mutate({ id: editingGroupId, data: groupForm })
+    } else {
+      createGroup.mutate(groupForm)
+    }
+  }
+
+  const submitOption = (e: React.FormEvent, groupId: string) => {
+    e.preventDefault()
+    const form = optionForm[groupId] ?? EMPTY_OPTION_FORM
+    if (!form.name.trim()) { toast.error('Nome obrigatório'); return }
+    const priceModifier = Number(form.priceModifier) || 0
+    if (editingOptionId && editingOptionGroupId === groupId) {
+      updateOption.mutate({ id: editingOptionId, data: { name: form.name.trim(), priceModifier } })
+    } else {
+      createOption.mutate({ groupId, data: { name: form.name.trim(), priceModifier } })
+    }
+  }
+
+  const cancelOptionForm = (groupId: string) => {
+    setShowOptionForm((prev) => ({ ...prev, [groupId]: false }))
+    setOptionForm((prev) => ({ ...prev, [groupId]: EMPTY_OPTION_FORM }))
+    if (editingOptionGroupId === groupId) { setEditingOptionId(null); setEditingOptionGroupId(null) }
+  }
+
+  const cancelGroupForm = () => {
+    setShowGroupForm(false)
+    setGroupForm(EMPTY_GROUP_FORM)
+    setEditingGroupId(null)
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mt-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="font-black text-gray-900 text-lg">Adicionais</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Grupos de opções do produto</p>
+        </div>
+        {!showGroupForm && (
+          <button
+            type="button"
+            onClick={() => { cancelGroupForm(); setShowGroupForm(true) }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--color-lime-primary)] text-white text-xs font-bold hover:brightness-90 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" /> Novo grupo
+          </button>
+        )}
+      </div>
+
+      {/* Group form */}
+      {showGroupForm && (
+        <form onSubmit={submitGroup} className="bg-gray-50 rounded-2xl border border-gray-200 p-4 mb-4 space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-sm font-bold text-gray-700">{editingGroupId ? 'Editar grupo' : 'Novo grupo'}</p>
+            <button type="button" onClick={cancelGroupForm} className="w-7 h-7 rounded-xl hover:bg-gray-200 flex items-center justify-center text-gray-400 transition-colors">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <input
+            value={groupForm.name}
+            onChange={(e) => setGroupForm((f) => ({ ...f, name: e.target.value }))}
+            placeholder="Ex: Ponto da carne, Bebida, Molho..."
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)] bg-white"
+          />
+
+          <div className="flex flex-wrap gap-4 items-center">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div
+                onClick={() => setGroupForm((f) => ({ ...f, required: !f.required }))}
+                className={cn('w-9 h-5 rounded-full transition-colors relative shrink-0', groupForm.required ? 'bg-[var(--color-lime-primary)]' : 'bg-gray-200')}
+              >
+                <div className={cn('absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform', groupForm.required ? 'translate-x-4' : 'translate-x-0.5')} />
+              </div>
+              <span className="text-xs font-bold text-gray-700">Obrigatório</span>
+            </label>
+
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold text-gray-600 whitespace-nowrap">Máx. escolhas</label>
+              <input
+                type="number" min={1} value={groupForm.maxChoices}
+                onChange={(e) => setGroupForm((f) => ({ ...f, maxChoices: Number(e.target.value) }))}
+                className="w-16 px-2 py-1.5 rounded-xl border border-gray-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)] bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <Button type="submit" variant="primary" size="sm" loading={createGroup.isPending || updateGroup.isPending}>
+              {editingGroupId ? 'Salvar' : 'Criar grupo'}
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={cancelGroupForm}>Cancelar</Button>
+          </div>
+        </form>
+      )}
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="space-y-3">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-2xl" />
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && groups.length === 0 && !showGroupForm && (
+        <div className="text-center py-10 border-2 border-dashed border-gray-100 rounded-2xl">
+          <p className="text-gray-400 text-sm font-medium">Nenhum grupo de adicionais</p>
+          <button
+            type="button"
+            onClick={() => setShowGroupForm(true)}
+            className="mt-2 text-xs font-bold text-[var(--color-lime-primary)] hover:underline"
+          >
+            Criar o primeiro grupo
+          </button>
+        </div>
+      )}
+
+      {/* Groups list */}
+      {!isLoading && groups.length > 0 && (
+        <div className="space-y-3">
+          {groups.map((group) => {
+            const isEditingThisOption = editingOptionGroupId === group.id
+            const currentOptionForm = optionForm[group.id] ?? EMPTY_OPTION_FORM
+            const showingOptionForm = showOptionForm[group.id] ?? false
+
+            return (
+              <div key={group.id} className="rounded-2xl border border-gray-100 overflow-hidden">
+                {/* Group header */}
+                <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-gray-900 text-sm">{group.name}</span>
+                      <span className={cn(
+                        'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
+                        group.required ? 'bg-[var(--color-lime-primary)] text-white' : 'bg-gray-200 text-gray-500'
+                      )}>
+                        {group.required ? 'Obrigatório' : 'Opcional'}
+                      </span>
+                      <span className="text-[10px] text-gray-400 shrink-0">até {group.maxChoices} escolha{group.maxChoices !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => openEditGroup(group)}
+                      className="w-7 h-7 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-white transition-colors"
+                      title="Editar grupo"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Remover grupo "${group.name}" e todas as suas opções?`)) {
+                          deleteGroup.mutate(group.id)
+                        }
+                      }}
+                      className="w-7 h-7 rounded-xl border border-red-100 flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors"
+                      title="Remover grupo"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Options list */}
+                <div className="px-4 py-2 space-y-1">
+                  {group.options.length === 0 && !showingOptionForm && (
+                    <p className="text-xs text-gray-400 py-2 text-center">Nenhuma opção</p>
+                  )}
+
+                  {group.options.map((opt) => (
+                    <div key={opt.id} className="flex items-center gap-2 py-1.5">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-700 font-medium">{opt.name}</span>
+                          {!opt.available && (
+                            <span className="text-[10px] font-bold text-red-400 bg-red-50 px-1.5 py-0.5 rounded-full">Inativo</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-600 shrink-0">
+                        {opt.priceModifier > 0 ? `+${formatCurrency(opt.priceModifier)}` : 'Grátis'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => openEditOption(opt, group.id)}
+                        className="w-6 h-6 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 transition-colors shrink-0"
+                        title="Editar opção"
+                      >
+                        <Edit2 className="w-2.5 h-2.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!confirm(`Remover "${opt.name}"?`)) return
+                          try {
+                            const res = await fetch(`/api/admin/menu/options/${opt.id}`, { method: 'DELETE' })
+                            if (res.status === 409) {
+                              const data = await res.json()
+                              toast.error(data.error ?? 'Não é possível remover')
+                            } else if (res.ok) {
+                              invalidate()
+                              toast.success('Opção removida')
+                            } else {
+                              toast.error('Erro ao remover opção')
+                            }
+                          } catch {
+                            toast.error('Erro ao remover opção')
+                          }
+                        }}
+                        className="w-6 h-6 rounded-lg border border-red-100 flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors shrink-0"
+                        title="Remover opção"
+                      >
+                        <Trash2 className="w-2.5 h-2.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateOption.mutate({ id: opt.id, data: { available: !opt.available } })}
+                        className={cn(
+                          'w-6 h-6 rounded-lg border flex items-center justify-center transition-colors shrink-0',
+                          opt.available ? 'border-emerald-200 text-emerald-500 hover:bg-emerald-50' : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                        )}
+                        title={opt.available ? 'Desativar' : 'Ativar'}
+                      >
+                        {opt.available ? <Eye className="w-2.5 h-2.5" /> : <EyeOff className="w-2.5 h-2.5" />}
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Option form */}
+                  {showingOptionForm && (
+                    <form
+                      onSubmit={(e) => submitOption(e, group.id)}
+                      className="flex gap-2 items-end flex-wrap py-2 border-t border-gray-100 mt-1"
+                    >
+                      <div className="flex-1 min-w-40">
+                        <input
+                          value={currentOptionForm.name}
+                          onChange={(e) => setOptionForm((prev) => ({ ...prev, [group.id]: { ...currentOptionForm, name: e.target.value } }))}
+                          placeholder="Nome da opção"
+                          className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+                        />
+                      </div>
+                      <div className="w-28">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={currentOptionForm.priceModifier}
+                          onChange={(e) => setOptionForm((prev) => ({ ...prev, [group.id]: { ...currentOptionForm, priceModifier: e.target.value } }))}
+                          placeholder="Preço adicional"
+                          className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)]"
+                        />
+                      </div>
+                      <div className="flex gap-1.5">
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          size="sm"
+                          loading={createOption.isPending || updateOption.isPending}
+                        >
+                          {isEditingThisOption ? 'Salvar' : 'Adicionar'}
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => cancelOptionForm(group.id)}>
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+
+                {/* Add option button */}
+                {!showingOptionForm && (
+                  <div className="px-4 pb-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowOptionForm((prev) => ({ ...prev, [group.id]: true }))
+                        setOptionForm((prev) => ({ ...prev, [group.id]: EMPTY_OPTION_FORM }))
+                        setEditingOptionId(null)
+                        setEditingOptionGroupId(null)
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-lime-primary)] hover:underline"
+                    >
+                      <Plus className="w-3 h-3" /> Adicionar opção
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function CardapioPage() {
   const queryClient = useQueryClient()
@@ -370,6 +795,8 @@ export default function CardapioPage() {
                   <Button type="button" variant="outline" size="md" onClick={resetProductForm}>Cancelar</Button>
                 </div>
               </form>
+
+              {editingProductId && <OptionGroupsEditor productId={editingProductId} />}
             </div>
           )}
 
