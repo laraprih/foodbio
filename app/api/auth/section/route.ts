@@ -10,7 +10,7 @@ const SECTION_ROLE: Record<Section, string> = {
   entregador: 'driver',
 }
 
-export const SECTION_COOKIE: Record<Section, string> = {
+const SECTION_COOKIE: Record<Section, string> = {
   pdv: 'pdv_session',
   cozinha: 'cozinha_session',
   entregador: 'entregador_session',
