@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Home as HomeIcon, ShoppingBag, Heart, User, Star, Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -127,8 +127,9 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
   const [activeCategoryId, setActiveCategoryId] = useState('destaques');
   const [searchQuery, setSearchQuery] = useState('');
   const [modalProduct, setModalProduct] = useState<Product | null>(null);
+  const blockScrollSpy = useRef(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setTenant({ id: tenant.id, slug: tenant.slug, name: tenant.name, gateway: tenant.gateway });
   }, [tenant, setTenant]);
 
@@ -143,11 +144,35 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
     ...menuCategories.map(({ id, name, iconUrl }) => ({ id, name, iconUrl })),
   ];
 
+  const sectionIds = tabs.map((t) => t.id);
+
+  // Scroll-spy: atualiza tab ativo conforme seção visível
+  const handleScroll = useCallback(() => {
+    if (blockScrollSpy.current || searchQuery) return;
+    const THRESHOLD = 120; // header (64px) + tab bar (~48px) + buffer
+    let current = sectionIds[0] ?? '';
+    for (const id of sectionIds) {
+      const el = document.getElementById(`section-${id}`);
+      if (!el) continue;
+      if (el.getBoundingClientRect().top <= THRESHOLD) {
+        current = id;
+      }
+    }
+    setActiveCategoryId(current);
+  }, [sectionIds, searchQuery]);
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
   const handleTabSelect = (id: string) => {
     setActiveCategoryId(id);
+    blockScrollSpy.current = true;
+    setTimeout(() => { blockScrollSpy.current = false; }, 900);
     const el = document.getElementById(`section-${id}`);
     if (el) {
-      const offset = 130;
+      const offset = 115;
       const top = el.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top, behavior: 'smooth' });
     }
@@ -210,7 +235,7 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
 
       {/* Sticky category tabs */}
       {tabs.length > 0 && (
-        <div className="sticky top-[104px] z-30 bg-white border-b border-gray-100">
+        <div className="sticky top-16 z-30 bg-white border-b border-gray-100">
           <div className="max-w-2xl mx-auto px-4 py-2.5">
             <CategoryBar
               categories={tabs}
