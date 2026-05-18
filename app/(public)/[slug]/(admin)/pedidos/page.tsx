@@ -62,8 +62,11 @@ const QUICK_OPTIONS = [
   { label: '30 dias', getValue: () => ({ from: toISO(addDays(new Date(), -29)), to: toISO(new Date()) }) },
 ]
 
+type OriginFilter = 'all' | 'online' | 'pdv'
+
 export default function PedidosPage() {
   const [activeTab, setActiveTab] = useState('all')
+  const [originFilter, setOriginFilter] = useState<OriginFilter>('all')
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const queryClient = useQueryClient()
@@ -167,7 +170,11 @@ export default function PedidosPage() {
   })
 
   const ordersArr = isApiError(orders) || !Array.isArray(orders) ? [] : orders
-  const filtered = activeTab === 'all' ? ordersArr : ordersArr.filter((o: any) => o.status === activeTab)
+  const filteredByOrigin =
+    originFilter === 'online' ? ordersArr.filter((o: any) => o.origin === 'online' || !o.cashSessionId) :
+    originFilter === 'pdv'    ? ordersArr.filter((o: any) => o.origin === 'pdv'    ||  o.cashSessionId) :
+    ordersArr
+  const filtered = activeTab === 'all' ? filteredByOrigin : filteredByOrigin.filter((o: any) => o.status === activeTab)
 
   const dateLabel = isSingleDay
     ? (dateFrom === todayISO ? 'Hoje' : dateFrom === toISO(addDays(new Date(), -1)) ? 'Ontem' : formatDisplay(dateFrom))
@@ -291,6 +298,36 @@ export default function PedidosPage() {
         )}
       </div>
 
+      {/* Origin filter */}
+      <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar">
+        {([
+          { id: 'all',    label: 'Todos os pedidos' },
+          { id: 'online', label: '🌐 Online' },
+          { id: 'pdv',    label: '🏪 Presencial / PDV' },
+        ] as { id: OriginFilter; label: string }[]).map(o => (
+          <button
+            key={o.id}
+            onClick={() => setOriginFilter(o.id)}
+            className={cn(
+              'px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border',
+              originFilter === o.id
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+            )}
+          >
+            {o.label}
+            {o.id !== 'all' && (
+              <span className="ml-1.5 opacity-60">
+                {(o.id === 'online'
+                  ? ordersArr.filter((x: any) => x.origin === 'online' || !x.cashSessionId)
+                  : ordersArr.filter((x: any) => x.origin === 'pdv'    ||  x.cashSessionId)
+                ).length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {/* Status tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1 no-scrollbar">
         {STATUS_TABS.map((tab) => (
@@ -367,6 +404,19 @@ export default function PedidosPage() {
                   )}>
                     {STATUS_LABELS[order.status] ?? order.status}
                   </span>
+                  <span className={cn(
+                    'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                    order.origin === 'pdv'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-blue-100 text-blue-700'
+                  )}>
+                    {order.origin === 'pdv' ? '🏪 PDV' : '🌐 Online'}
+                  </span>
+                  {order.tableNumber && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                      Mesa {order.tableNumber}
+                    </span>
+                  )}
                   {order.customerName && (
                     <span className="text-xs text-gray-400 truncate max-w-[120px]">
                       {order.customerName}

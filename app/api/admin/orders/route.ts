@@ -28,8 +28,12 @@ export async function GET(req: NextRequest) {
   const { rows: orders } = await pool.query(
     `SELECT o.id, o.status, o.type, o.total, o.subtotal, o."deliveryFee",
             o."paymentStatus", o."paymentMethod", o."customerName", o."customerPhone",
-            o."deliveryAddress", o."externalReference", o."createdAt", o."updatedAt"
+            o."deliveryAddress", o."externalReference", o."createdAt", o."updatedAt",
+            o."cashSessionId", o."tableId",
+            tab.number AS "tableNumber",
+            CASE WHEN o."cashSessionId" IS NOT NULL THEN 'pdv' ELSE 'online' END AS origin
      FROM "Order" o
+     LEFT JOIN "Table" tab ON tab.id = o."tableId"
      WHERE o."tenantId" = $1
        AND o."createdAt" >= ($2::date)
        AND o."createdAt" <  ($3::date + interval '1 day')
@@ -78,6 +82,9 @@ export async function GET(req: NextRequest) {
       externalReference: o.externalReference,
       createdAt: o.createdAt,
       updatedAt: o.updatedAt,
+      cashSessionId: o.cashSessionId,
+      tableNumber: o.tableNumber ?? null,
+      origin: o.origin,
       items: itemsByOrder[o.id] ?? [],
     }))
   )
