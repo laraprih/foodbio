@@ -254,3 +254,15 @@ model PaymentTransaction {
   @@index([gatewayTransactionId])
   @@index([splitStatus])
 }
+
+model WhatsAppVerification {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  code      String
+  verified  Boolean  @default(false)
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPool } from '@/lib/db'
 import { createHmac } from 'crypto'
 import { serverEmit } from '@/lib/server-emit'
+import { sendOrderConfirmation, normalizeWhatsAppPhone } from '@/lib/whatsapp'
 
 export const dynamic = 'force-dynamic'
 
@@ -129,6 +130,11 @@ export async function POST(req: NextRequest) {
         event: 'order:confirmed',
         data: { orderId, status: 'confirmed' },
       })
+
+      // Envia WhatsApp se o número do cliente estiver verificado
+      await notifyCustomerWhatsApp(pool, orderId, tenantId).catch((e) =>
+        console.error('[webhook/mp] whatsapp notification error:', e)
+      )
     }
   } else if (mpStatus === 'rejected' || mpStatus === 'cancelled') {
     await pool.query(
@@ -165,4 +171,43 @@ export async function POST(req: NextRequest) {
 
   console.info(`[webhook/mp] payment=${paymentId} status=${mpStatus} order=${orderId}`)
   return NextResponse.json({ ok: true })
+}
+
+async function notifyCustomerWhatsApp(pool: any, orderId: string, tenantId: string) {
+  // Busca dados do pedido e tenant em paralelo
+  const [orderRes, tenantRes] = await Promise.all([
+    pool.query(
+      `SELECT "customerPhone", "customerName" FROM "Order" WHERE id = $1`,
+      [orderId]
+    ),
+    pool.query(
+      `SELECT name, slug FROM "Tenant" WHERE id = $1`,
+      [tenantId]
+    ),
+  ])
+
+  const order  = orderRes.rows[0]
+  const tenant = tenantRes.rows[0]
+  if (!order?.customerPhone || !tenant) return
+
+  const phone = normalizeWhatsAppPhone(order.customerPhone)
+
+  // Só envia se o número foi verificado pelo cliente
+  const { rows: vRows } = await pool.query(
+    `SELECT verified FROM "WhatsAppVerification" WHERE phone = $1`,
+    [phone]
+  )
+  if (!vRows[0]?.verified) return
+
+  const orderCode = orderId.slice(-8).toUpperCase()
+  await sendOrderConfirmation({
+    phone,
+    customerName: order.customerName ?? '',
+    orderId,
+    orderCode,
+    slug: tenant.slug,
+    tenantName: tenant.name,
+  })
+
+  console.info(`[webhook/mp] whatsapp sent to ${phone} for order ${orderId}`)
 }
