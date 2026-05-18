@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { StoreImage } from '@/components/ui/StoreImage';
 import { X, Minus, Plus, ShoppingCart, ChefHat } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
-import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 interface Option {
@@ -18,6 +17,7 @@ interface OptionGroup {
   name: string;
   required: boolean;
   maxSelections: number;
+  minSelections?: number;
   options: Option[];
 }
 
@@ -42,12 +42,14 @@ export default function ProductModal({ product, slug, onClose, onAdd }: ProductM
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
   const [quantity, setQuantity] = useState(1);
+  const [attemptedAdd, setAttemptedAdd] = useState(false);
 
   useEffect(() => {
     if (!product) return;
     setSelectedOptions([]);
     setQuantity(1);
     setOptionGroups([]);
+    setAttemptedAdd(false);
     setLoadingOptions(true);
 
     fetch(`/api/store/${slug}/products/${product.id}`)
@@ -86,6 +88,16 @@ export default function ProductModal({ product, slug, onClose, onAdd }: ProductM
   const optionsTotal = selectedOptions.reduce((s, o) => s + o.price, 0);
   const unitPrice = product.price + optionsTotal;
   const totalPrice = unitPrice * quantity;
+
+  // Validate required groups
+  const incompleteGroups = optionGroups
+    .filter((g) => g.required || (g.minSelections ?? 0) > 0)
+    .filter((g) => {
+      const count = selectedOptions.filter((o) => g.options.some((go) => go.id === o.id)).length;
+      const min = (g.minSelections ?? 0) > 0 ? g.minSelections! : (g.required ? 1 : 0);
+      return count < min;
+    });
+  const canAdd = product.available && incompleteGroups.length === 0;
 
   return (
     <>
@@ -152,18 +164,34 @@ export default function ProductModal({ product, slug, onClose, onAdd }: ProductM
               ))}
             </div>
           ) : (
-            optionGroups.map((group) => (
-              <div key={group.id} className="mt-5">
+            optionGroups.map((group) => {
+              const selectedInGroup = selectedOptions.filter((o) => group.options.some((go) => go.id === o.id)).length;
+              const minRequired = (group.minSelections ?? 0) > 0 ? group.minSelections! : (group.required ? 1 : 0);
+              const groupComplete = selectedInGroup >= minRequired;
+              const showError = attemptedAdd && !groupComplete;
+
+              return (
+              <div key={group.id} className={cn('mt-5 rounded-2xl transition-all', showError && 'ring-2 ring-red-400 ring-offset-2')}>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-gray-900 text-sm">{group.name}</h3>
-                  <span className={cn(
-                    'text-[10px] font-bold px-2 py-0.5 rounded-full',
-                    group.required
-                      ? 'bg-[var(--color-lime-primary)] text-white'
-                      : 'bg-gray-100 text-gray-500'
-                  )}>
-                    {group.required ? 'Obrigatório' : 'Opcional'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 text-sm">{group.name}</h3>
+                    {groupComplete && minRequired > 0 && (
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">✓</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {showError && (
+                      <span className="text-[10px] font-bold text-red-500">Escolha uma opção</span>
+                    )}
+                    <span className={cn(
+                      'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                      group.required
+                        ? 'bg-[var(--color-lime-primary)] text-white'
+                        : 'bg-gray-100 text-gray-500'
+                    )}>
+                      {group.required ? 'Obrigatório' : 'Opcional'}
+                    </span>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   {group.options.map((opt) => {
@@ -200,7 +228,8 @@ export default function ProductModal({ product, slug, onClose, onAdd }: ProductM
                   })}
                 </div>
               </div>
-            ))
+              );
+            })
           )}
           <div className="h-4" />
         </div>
@@ -228,11 +257,22 @@ export default function ProductModal({ product, slug, onClose, onAdd }: ProductM
             {/* Add to cart */}
             <button
               disabled={!product.available}
-              onClick={() => { onAdd(product, selectedOptions, quantity); onClose(); }}
-              className="flex-1 min-w-0 flex items-center justify-center gap-2 bg-[var(--color-lime-primary)] text-white font-bold text-sm py-3 rounded-xl hover:brightness-90 active:scale-[0.98] transition-all disabled:opacity-50 shadow-sm"
+              onClick={() => {
+                if (!canAdd) { setAttemptedAdd(true); return; }
+                onAdd(product, selectedOptions, quantity);
+                onClose();
+              }}
+              className={cn(
+                'flex-1 min-w-0 flex items-center justify-center gap-2 text-white font-bold text-sm py-3 rounded-xl active:scale-[0.98] transition-all disabled:opacity-50 shadow-sm',
+                canAdd || !product.available
+                  ? 'bg-[var(--color-lime-primary)] hover:brightness-90'
+                  : 'bg-gray-400 cursor-pointer'
+              )}
             >
               <ShoppingCart className="w-4 h-4 shrink-0" />
-              <span className="truncate">Adicionar · {formatCurrency(totalPrice)}</span>
+              <span className="truncate">
+                {canAdd || !attemptedAdd ? `Adicionar · ${formatCurrency(totalPrice)}` : 'Preencha as opções obrigatórias'}
+              </span>
             </button>
           </div>
         </div>
