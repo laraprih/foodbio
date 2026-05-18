@@ -6,7 +6,7 @@ import { get, post, patch, del, isApiError } from '@/lib/api-client'
 import { toast } from 'react-hot-toast'
 import {
   Plus, Edit2, Trash2, Eye, EyeOff, X, Upload, ImageIcon,
-  FolderOpen, ChevronDown, ChevronUp, Loader2, CheckCircle,
+  FolderOpen, ChevronDown, ChevronUp, Loader2, CheckCircle, Star,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Button } from '@/components/ui/Button'
@@ -17,7 +17,7 @@ import Image from 'next/image'
 interface Category { id: string; name: string; order: number; active: boolean; products: Product[] }
 interface Product {
   id: string; name: string; description?: string; price: number
-  available: boolean; imageUrl?: string; sortOrder: number
+  available: boolean; imageUrl?: string; sortOrder: number; featured?: boolean
   category: { id: string; name: string }
 }
 
@@ -838,6 +838,7 @@ export default function CardapioPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-bold text-gray-900 text-sm truncate">{product.name}</p>
                       <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">{product.category.name}</span>
+                      {product.featured && <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full shrink-0">★ Destaque</span>}
                       {!product.available && <span className="text-[10px] font-bold text-red-400 bg-red-50 px-2 py-0.5 rounded-full shrink-0">Indisponível</span>}
                     </div>
                     {product.description && <p className="text-xs text-gray-400 truncate mt-0.5">{product.description}</p>}
@@ -846,6 +847,13 @@ export default function CardapioPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => updateProduct.mutate({ id: product.id, data: { featured: !product.featured } })}
+                      title={product.featured ? 'Remover dos destaques' : 'Adicionar aos destaques'}
+                      className={cn('w-8 h-8 rounded-xl border flex items-center justify-center transition-colors',
+                        product.featured ? 'border-amber-300 bg-amber-50 text-amber-500' : 'border-gray-200 text-gray-300 hover:border-amber-200 hover:text-amber-400')}>
+                      <Star className={cn('w-3.5 h-3.5', product.featured && 'fill-amber-400')} />
+                    </button>
                     <button onClick={() => toggleAvailability.mutate(product.id)} title={product.available ? 'Desativar' : 'Ativar'}
                       className={cn('w-8 h-8 rounded-xl border flex items-center justify-center transition-colors',
                         product.available ? 'border-emerald-200 text-emerald-500 hover:bg-emerald-50' : 'border-gray-200 text-gray-400 hover:bg-gray-50')}>

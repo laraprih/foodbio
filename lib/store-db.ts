@@ -24,7 +24,7 @@ export async function getTenantMenuDirect(tenantId: string) {
 
   const { rows: products } = await pool.query(
     `SELECT id, "categoryId", name, description, price,
-            "imageUrl", available, "sortOrder"
+            "imageUrl", available, "sortOrder", featured
      FROM "Product"
      WHERE "tenantId" = $1 AND available = true
      ORDER BY "sortOrder" ASC`,

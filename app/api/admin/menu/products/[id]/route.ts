@@ -21,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const values: any[] = []
   let idx = 1
 
-  const allowed = ['name', 'description', 'price', 'categoryId', 'imageUrl', 'available', 'sortOrder']
+  const allowed = ['name', 'description', 'price', 'categoryId', 'imageUrl', 'available', 'sortOrder', 'featured']
   for (const key of allowed) {
     if (body[key] !== undefined) {
       const col = key === 'categoryId' ? '"categoryId"' : key === 'imageUrl' ? '"imageUrl"' : key === 'sortOrder' ? '"sortOrder"' : `"${key}"`
@@ -36,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   values.push(id, tenantId)
   const { rows } = await pool.query(
     `UPDATE "Product" SET ${fields.join(', ')} WHERE id = $${idx} AND "tenantId" = $${idx + 1}
-     RETURNING id, "categoryId", name, description, price, "imageUrl", available, "sortOrder"`,
+     RETURNING id, "categoryId", name, description, price, "imageUrl", available, "sortOrder", featured`,
     values
   )
 

@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { Home as HomeIcon, ShoppingBag, Heart, User, LayoutGrid, List } from 'lucide-react';
+import { Home as HomeIcon, ShoppingBag, Heart, User, Star, Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import HomeHeader from '@/components/ecommerce/HomeHeader';
 import CategoryBar from '@/components/ecommerce/CategoryBar';
-import MenuCard from '@/components/ecommerce/MenuCard';
 import ProductModal from '@/components/ecommerce/ProductModal';
+import { StoreImage } from '@/components/ui/StoreImage';
 import useSessionStore from '@/store/session-store';
 import { useCart } from '@/hooks/use-cart';
 
@@ -31,6 +31,7 @@ interface Product {
   description?: string;
   available: boolean;
   categoryId?: string;
+  featured?: boolean;
 }
 
 interface Category {
@@ -46,36 +47,120 @@ interface RestaurantShellProps {
   slug: string;
 }
 
+// ── Featured card (Destaques grid) ──────────────────────────────────────────
+function FeaturedCard({ product, onAdd }: { product: Product; onAdd: (id: string) => void }) {
+  return (
+    <div
+      className="cursor-pointer group active:scale-[0.97] transition-transform"
+      onClick={() => onAdd(product.id)}
+    >
+      <div className="aspect-square rounded-2xl overflow-hidden relative bg-gray-100">
+        {product.imageUrl ? (
+          <StoreImage
+            src={product.imageUrl}
+            alt={product.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+            <ShoppingBag className="w-8 h-8 text-gray-200" />
+          </div>
+        )}
+        {!product.available && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <span className="text-white text-[9px] font-bold bg-black/60 px-1.5 py-0.5 rounded-full">Esgotado</span>
+          </div>
+        )}
+      </div>
+      <p className="font-black text-gray-900 text-sm mt-2">{formatCurrency(product.price)}</p>
+      <p className="text-xs text-gray-500 line-clamp-2 mt-0.5 leading-snug">{product.name}</p>
+    </div>
+  );
+}
+
+// ── List item (category sections) ───────────────────────────────────────────
+function ProductListItem({ product, onAdd }: { product: Product; onAdd: (id: string) => void }) {
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-3 py-4 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors px-1 rounded-xl',
+        !product.available && 'opacity-60'
+      )}
+      onClick={() => onAdd(product.id)}
+    >
+      <div className="flex-1 min-w-0">
+        <h4 className="font-bold text-gray-900 text-sm leading-snug">{product.name}</h4>
+        {product.description && (
+          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">{product.description}</p>
+        )}
+        <div className="flex items-center gap-2 mt-2">
+          <span className="font-black text-gray-900 text-base">{formatCurrency(product.price)}</span>
+        </div>
+      </div>
+      {product.imageUrl ? (
+        <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 relative bg-gray-100">
+          <StoreImage
+            src={product.imageUrl}
+            alt={product.name}
+            fill
+            className="object-cover"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      ) : (
+        <div className="w-24 h-24 rounded-2xl shrink-0 bg-gray-100 flex items-center justify-center">
+          <Plus className="w-8 h-8 text-gray-200" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellProps) {
   const { setTenant } = useSessionStore();
-  const { addToCart, count: cartCount } = useCart();
+  const { addToCart, count: cartCount, cartSubtotal } = useCart();
   const { data: session } = useSession();
   const customer = session?.user as any;
   const isLoggedIn = customer?.role === 'customer' && !!customer?.tenantId;
-  const [activeCategoryId, setActiveCategoryId] = useState('all');
+  const [activeCategoryId, setActiveCategoryId] = useState('destaques');
   const [searchQuery, setSearchQuery] = useState('');
-  const [gridLayout, setGridLayout] = useState<'grid' | 'list'>('grid');
   const [modalProduct, setModalProduct] = useState<Product | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setTenant({ id: tenant.id, slug: tenant.slug, name: tenant.name, gateway: tenant.gateway });
   }, [tenant, setTenant]);
 
   const menuCategories = menu ?? [];
-  const categories = [
-    { id: 'all', name: 'Todos', products: [] as Product[] },
-    ...menuCategories.map(({ id, name, iconUrl }) => ({ id, name, iconUrl, products: [] as Product[] })),
-  ];
   const allProducts = menuCategories.flatMap((c) =>
     c.products.map((p) => ({ ...p, categoryId: p.categoryId ?? c.id }))
   );
+  const featuredProducts = allProducts.filter((p) => p.featured && p.available);
 
-  const filteredProducts = allProducts.filter((p) => {
-    const matchesCategory = activeCategoryId === 'all' || p.categoryId === activeCategoryId;
-    const matchesSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const tabs = [
+    ...(featuredProducts.length > 0 ? [{ id: 'destaques', name: 'Destaques' }] : []),
+    ...menuCategories.map(({ id, name, iconUrl }) => ({ id, name, iconUrl })),
+  ];
+
+  const handleTabSelect = (id: string) => {
+    setActiveCategoryId(id);
+    const el = document.getElementById(`section-${id}`);
+    if (el) {
+      const offset = 130;
+      const top = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  };
+
+  const searchResults = searchQuery
+    ? allProducts.filter(
+        (p) =>
+          p.available &&
+          (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.description?.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : [];
 
   const handleAddToCart = (productId: string) => {
     const product = allProducts.find((p) => p.id === productId);
@@ -83,7 +168,11 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
     setModalProduct(product);
   };
 
-  const handleModalAdd = (product: Product, options: { id: string; name: string; price: number }[], quantity: number) => {
+  const handleModalAdd = (
+    product: Product,
+    options: { id: string; name: string; price: number }[],
+    quantity: number
+  ) => {
     for (let i = 0; i < quantity; i++) {
       const result = addToCart(
         { id: product.id, name: product.name, price: product.price, imageUrl: product.imageUrl ?? null },
@@ -100,13 +189,14 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <ProductModal
         product={modalProduct}
         slug={slug}
         onClose={() => setModalProduct(null)}
         onAdd={handleModalAdd}
       />
+
       <HomeHeader
         restaurantName={tenant.name}
         restaurantLogo={tenant.logoUrl}
@@ -118,94 +208,119 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
         slug={slug}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28 lg:pb-12">
-        <div className="lg:flex lg:gap-8">
-          {/* Desktop sidebar */}
-          <aside className="hidden lg:block w-52 xl:w-56 shrink-0">
-            <div className="sticky top-24">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">Categorias</p>
-              <div className="space-y-1">
-                {categories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategoryId(cat.id)}
-                    className={cn(
-                      'w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all',
-                      cat.id === activeCategoryId
-                        ? 'bg-[var(--color-lime-primary)] text-white'
-                        : 'text-gray-600 hover:bg-[var(--color-app-bg)]'
-                    )}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </aside>
+      {/* Sticky category tabs */}
+      {tabs.length > 0 && (
+        <div className="sticky top-[104px] z-30 bg-white border-b border-gray-100">
+          <div className="max-w-2xl mx-auto px-4 py-2.5">
+            <CategoryBar
+              categories={tabs}
+              activeId={activeCategoryId}
+              onSelect={handleTabSelect}
+            />
+          </div>
+        </div>
+      )}
 
-          {/* Main content */}
-          <div className="flex-1 min-w-0">
-            {/* Category bar (mobile/tablet) + layout toggle */}
-            <div className="flex items-center gap-3 mb-5">
-              <div className="flex-1 overflow-hidden lg:hidden">
-                <CategoryBar categories={categories} activeId={activeCategoryId} onSelect={setActiveCategoryId} />
-              </div>
-              {/* Layout toggle */}
-              <div className="hidden sm:flex items-center bg-white border border-gray-100 rounded-xl p-0.5 shrink-0">
-                <button
-                  onClick={() => setGridLayout('grid')}
-                  className={cn('p-2 rounded-lg transition-all', gridLayout === 'grid' ? 'bg-[var(--color-lime-primary)] text-white' : 'text-gray-400 hover:text-gray-600')}
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setGridLayout('list')}
-                  className={cn('p-2 rounded-lg transition-all', gridLayout === 'list' ? 'bg-[var(--color-lime-primary)] text-white' : 'text-gray-400 hover:text-gray-600')}
-                >
-                  <List className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Results count */}
-            {searchQuery && (
-              <p className="text-sm text-gray-500 mb-4">
-                <span className="font-bold text-gray-900">{filteredProducts.length}</span>{' '}
-                resultado{filteredProducts.length !== 1 ? 's' : ''} para &ldquo;{searchQuery}&rdquo;
-              </p>
-            )}
-
-            {/* Product grid */}
-            {filteredProducts.length === 0 ? (
+      {/* Main content */}
+      <div className="max-w-2xl mx-auto px-4 py-5 pb-40">
+        {/* Search results */}
+        {searchQuery ? (
+          <div>
+            <p className="text-sm text-gray-500 mb-4">
+              <span className="font-bold text-gray-900">{searchResults.length}</span>{' '}
+              resultado{searchResults.length !== 1 ? 's' : ''} para &ldquo;{searchQuery}&rdquo;
+            </p>
+            {searchResults.length === 0 ? (
               <div className="text-center py-16">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ShoppingBag className="w-8 h-8 text-gray-300" />
-                </div>
-                <p className="font-semibold text-gray-600">Nenhum produto encontrado</p>
-                <p className="text-sm text-gray-400 mt-1">Tente outra categoria ou termo de busca</p>
+                <ShoppingBag className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                <p className="font-semibold text-gray-500">Nenhum produto encontrado</p>
               </div>
             ) : (
-              <div
-                className={cn(
-                  gridLayout === 'list'
-                    ? 'space-y-3'
-                    : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-                )}
-              >
-                {filteredProducts.map((product) => (
-                  <MenuCard
-                    key={product.id}
-                    product={product}
-                    restaurantSlug={tenant.slug}
-                    onAdd={handleAddToCart}
-                    layout={gridLayout}
-                  />
+              <div className="divide-y divide-gray-100">
+                {searchResults.map((p) => (
+                  <ProductListItem key={p.id} product={p} onAdd={handleAddToCart} />
                 ))}
               </div>
             )}
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Destaques section */}
+            {featuredProducts.length > 0 && (
+              <section id="section-destaques" className="mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
+                  <h2 className="font-black text-gray-900 text-xl">Destaques</h2>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {featuredProducts.map((p) => (
+                    <FeaturedCard key={p.id} product={p} onAdd={handleAddToCart} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Category sections */}
+            {menuCategories.map((cat) => {
+              const available = cat.products.filter((p) => p.available);
+              if (available.length === 0) return null;
+              return (
+                <section key={cat.id} id={`section-${cat.id}`} className="mb-8">
+                  <h2 className="font-black text-gray-900 text-xl mb-1">{cat.name}</h2>
+                  <p className="text-xs text-gray-400 mb-3">
+                    {available.length} item{available.length !== 1 ? 's' : ''}
+                  </p>
+                  <div className="divide-y divide-gray-100">
+                    {available.map((p) => (
+                      <ProductListItem key={p.id} product={p} onAdd={handleAddToCart} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+
+            {menuCategories.length === 0 && (
+              <div className="text-center py-20">
+                <ShoppingBag className="w-14 h-14 text-gray-200 mx-auto mb-4" />
+                <p className="font-semibold text-gray-400">Cardápio vazio</p>
+                <p className="text-sm text-gray-300 mt-1">Os produtos aparecerão aqui</p>
+              </div>
+            )}
+          </>
+        )}
       </div>
+
+      {/* Cart bottom bar */}
+      {cartCount > 0 && (
+        <div className="fixed bottom-[60px] lg:bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.10)]">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-lime-primary)] flex items-center justify-center shrink-0 shadow-sm">
+              {tenant.logoUrl ? (
+                <div className="w-10 h-10 rounded-xl overflow-hidden relative">
+                  <StoreImage src={tenant.logoUrl} alt={tenant.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                </div>
+              ) : (
+                <ShoppingBag className="w-5 h-5 text-white" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-gray-400 leading-tight">Total sem a entrega</p>
+              <p className="font-black text-gray-900 text-sm leading-tight">
+                {formatCurrency(cartSubtotal)}{' '}
+                <span className="font-normal text-gray-400 text-xs">
+                  / {cartCount} {cartCount === 1 ? 'item' : 'itens'}
+                </span>
+              </p>
+            </div>
+            <Link
+              href={`/${slug}/cart`}
+              className="bg-[var(--color-lime-primary)] text-white font-bold text-sm px-5 py-2.5 rounded-xl hover:brightness-90 active:scale-[0.97] transition-all shrink-0 shadow-sm"
+            >
+              Ver sacola
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Mobile bottom navigation */}
       <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-gray-100 px-6 py-3 z-40">
@@ -229,7 +344,10 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
             <Heart className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
             <span className="text-[10px] font-semibold text-gray-400">Favoritos</span>
           </button>
-          <Link href={isLoggedIn ? `/${slug}/conta` : `/${slug}/login`} className="flex flex-col items-center gap-1 group">
+          <Link
+            href={isLoggedIn ? `/${slug}/conta` : `/${slug}/login`}
+            className="flex flex-col items-center gap-1 group"
+          >
             {isLoggedIn ? (
               <>
                 <div className="w-5 h-5 bg-[var(--color-lime-primary)] rounded-full flex items-center justify-center">
