@@ -149,7 +149,7 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
   // Scroll-spy: atualiza tab ativo conforme seção visível
   const handleScroll = useCallback(() => {
     if (blockScrollSpy.current || searchQuery) return;
-    const THRESHOLD = 120; // header (64px) + tab bar (~48px) + buffer
+    const THRESHOLD = 115; // header (64px) + category bar (~46px) + buffer
     let current = sectionIds[0] ?? '';
     for (const id of sectionIds) {
       const el = document.getElementById(`section-${id}`);
@@ -231,20 +231,18 @@ export default function RestaurantShell({ tenant, menu, slug }: RestaurantShellP
         searchValue={searchQuery}
         cartCount={cartCount}
         slug={slug}
+        categoryBar={
+          tabs.length > 0 ? (
+            <div className="max-w-2xl mx-auto px-4 py-2">
+              <CategoryBar
+                categories={tabs}
+                activeId={activeCategoryId}
+                onSelect={handleTabSelect}
+              />
+            </div>
+          ) : undefined
+        }
       />
-
-      {/* Sticky category tabs */}
-      {tabs.length > 0 && (
-        <div className="sticky top-16 z-30 bg-white border-b border-gray-100">
-          <div className="max-w-2xl mx-auto px-4 py-2.5">
-            <CategoryBar
-              categories={tabs}
-              activeId={activeCategoryId}
-              onSelect={handleTabSelect}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Main content */}
       <div className="max-w-2xl mx-auto px-4 py-5 pb-40">

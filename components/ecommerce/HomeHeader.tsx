@@ -17,6 +17,7 @@ interface HomeHeaderProps {
   minOrder?: number;
   deliveryTime?: string;
   rating?: number;
+  categoryBar?: React.ReactNode;
 }
 
 export default function HomeHeader({
@@ -30,18 +31,19 @@ export default function HomeHeader({
   slug,
   deliveryTime = '30-50',
   rating = 4.8,
+  categoryBar,
 }: HomeHeaderProps) {
   return (
     <div>
-      {/* Top sticky navbar */}
+      {/* Top sticky block: navbar + category bar together */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+        {/* Main navbar row */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 h-16">
             {/* Restaurant logo + name */}
             <Link href={slug ? `/${slug}` : '/'} className="flex items-center gap-2.5 shrink-0">
               {restaurantLogo ? (
                 logoFormat === 'wide' ? (
-                  // Horizontal rectangle logo
                   <div className="h-10 w-32 sm:h-11 sm:w-36 rounded-xl overflow-hidden shrink-0 relative">
                     <Image
                       src={restaurantLogo}
@@ -52,7 +54,6 @@ export default function HomeHeader({
                     />
                   </div>
                 ) : (
-                  // Square logo
                   <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden shrink-0 relative">
                     <Image
                       src={restaurantLogo}
@@ -111,13 +112,20 @@ export default function HomeHeader({
             )}
           </div>
         </div>
+
+        {/* Category bar slot — rendered inside the sticky header */}
+        {categoryBar && (
+          <div className="border-t border-gray-100 bg-white">
+            {categoryBar}
+          </div>
+        )}
       </header>
 
-      {/* Restaurant hero info strip */}
+      {/* Non-sticky info strip — scrolls away with the page */}
       <div className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           {/* Mobile search */}
-          <div className="md:hidden mb-4 relative">
+          <div className="md:hidden mb-3 relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
