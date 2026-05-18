@@ -1,5 +1,9 @@
 import Link from 'next/link';
-import { Bike, ChefHat, Smartphone, Star, Clock, Shield, ArrowRight, MapPin, Zap } from 'lucide-react';
+import {
+  Bike, ChefHat, Star, Clock, Shield, ArrowRight, Zap,
+  QrCode, Monitor, BarChart3, Users, Utensils, CreditCard,
+  MessageSquare, TrendingUp, CheckCircle, ChevronDown,
+} from 'lucide-react';
 
 export default function LandingPage() {
   return (
@@ -16,14 +20,15 @@ export default function LandingPage() {
           </div>
           <nav className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">Funcionalidades</a>
+            <a href="#segments" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">Segmentos</a>
             <a href="#how-it-works" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">Como funciona</a>
-            <a href="#partners" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">Para restaurantes</a>
+            <a href="#faq" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">FAQ</a>
           </nav>
           <Link
             href="/login"
             className="inline-flex items-center gap-2 bg-[var(--color-lime-primary)] text-white font-bold text-sm px-5 py-2.5 rounded-xl hover:brightness-90 transition-all"
           >
-            Entrar
+            Começar agora
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -41,17 +46,17 @@ export default function LandingPage() {
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-24 md:pt-28 md:pb-32">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 bg-[var(--color-lime-primary)]/10 border border-[var(--color-lime-primary)]/20 rounded-full px-4 py-1.5 mb-8">
-                <Zap className="w-3.5 h-3.5 text-[var(--color-lime-primary)]" />
-                <span className="text-xs font-bold text-[var(--color-lime-primary)]">Entrega expressa em minutos</span>
+                <Utensils className="w-3.5 h-3.5 text-[var(--color-lime-primary)]" />
+                <span className="text-xs font-bold text-[var(--color-lime-primary)]">Sistema ERP completo para restaurantes</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-gray-900 leading-[1.1] tracking-tight mb-6">
-                Comida boa,{' '}
-                <span className="text-[var(--color-lime-primary)]">rápida</span>{' '}
-                e no seu ritmo.
+                PDV, delivery e{' '}
+                <span className="text-[var(--color-lime-primary)]">cardápio digital</span>{' '}
+                em um só lugar.
               </h1>
               <p className="text-lg text-gray-500 leading-relaxed mb-10 max-w-xl">
-                Peça do seu restaurante favorito, acompanhe em tempo real e receba fresquinho onde você estiver.
+                Gerencie pedidos, mesas, cozinha e entregas com um sistema feito para o dia a dia do seu restaurante. Simples, rápido e completo.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -59,18 +64,17 @@ export default function LandingPage() {
                   href="/login"
                   className="inline-flex items-center justify-center gap-2.5 bg-[var(--color-lime-primary)] text-white font-black text-base px-8 py-4 rounded-2xl hover:brightness-90 transition-all shadow-lg shadow-[var(--color-lime-primary)]/20 active:scale-[0.98]"
                 >
-                  Pedir agora
+                  Começar gratuitamente
                   <ArrowRight className="w-4 h-4" />
                 </Link>
                 <a
-                  href="#how-it-works"
+                  href="#features"
                   className="inline-flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-700 font-bold text-base px-8 py-4 rounded-2xl hover:border-[var(--color-lime-primary)] hover:text-[var(--color-lime-primary)] transition-all"
                 >
-                  Como funciona
+                  Ver funcionalidades
                 </a>
               </div>
 
-              {/* Social proof */}
               <div className="mt-12 flex flex-wrap gap-6">
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-2">
@@ -78,7 +82,7 @@ export default function LandingPage() {
                       <div key={i} className={`w-8 h-8 rounded-full border-2 border-white ${c}`} />
                     ))}
                   </div>
-                  <span className="text-sm text-gray-500 font-medium">+10k clientes ativos</span>
+                  <span className="text-sm text-gray-500 font-medium">+500 restaurantes ativos</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   {[...Array(5)].map((_, i) => (
@@ -95,10 +99,10 @@ export default function LandingPage() {
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {[
-                  { label: 'Restaurantes parceiros', value: '500+' },
-                  { label: 'Pedidos entregues', value: '2M+' },
-                  { label: 'Tempo médio de entrega', value: '28 min' },
-                  { label: 'Cidades atendidas', value: '80+' },
+                  { label: 'Restaurantes ativos', value: '500+' },
+                  { label: 'Pedidos processados/mês', value: '150k+' },
+                  { label: 'Tempo médio de preparo', value: '18 min' },
+                  { label: 'Suporte especializado', value: '24/7' },
                 ].map((stat) => (
                   <div key={stat.label} className="text-center">
                     <p className="text-2xl font-black text-[var(--color-lime-primary)]">{stat.value}</p>
@@ -110,66 +114,158 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Features */}
-        <section id="features" className="py-20 md:py-28 bg-white">
+        {/* Pain Points */}
+        <section className="py-20 md:py-28 bg-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="text-center mb-14">
+              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">
+                Seu restaurante está{' '}
+                <span className="text-red-500">perdendo dinheiro</span>{' '}
+                por falta de sistema?
+              </h2>
+              <p className="text-gray-500 max-w-xl mx-auto">Problemas comuns que o Foodbio resolve do primeiro dia.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+              {[
+                {
+                  emoji: '⏱️',
+                  title: 'Atendimento lento',
+                  desc: 'Comandas em papel causam erros, retrabalho e mesas paradas mais tempo que o necessário.',
+                },
+                {
+                  emoji: '📦',
+                  title: 'Pedidos perdidos no delivery',
+                  desc: 'Sem integração entre delivery e cozinha, pedidos somem e clientes reclamam.',
+                },
+                {
+                  emoji: '📊',
+                  title: 'Sem controle financeiro',
+                  desc: 'Caixa fechado no chute, sem saber quanto vendeu, por qual método ou por turno.',
+                },
+                {
+                  emoji: '🔁',
+                  title: 'Retrabalho manual',
+                  desc: 'Cardápio atualizado num lugar mas não no outro. Esforço duplicado todo dia.',
+                },
+              ].map((item) => (
+                <div key={item.title} className="bg-red-50 rounded-2xl p-6 border border-red-100">
+                  <div className="text-3xl mb-3">{item.emoji}</div>
+                  <h3 className="font-bold text-gray-900 mb-2">{item.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-[var(--color-lime-primary)] rounded-2xl p-8 text-center text-white">
+              <p className="text-2xl md:text-3xl font-black mb-2">
+                Restaurantes com Foodbio vendem até{' '}
+                <span className="underline decoration-wavy">35% mais</span>{' '}
+                em 30 dias.
+              </p>
+              <p className="text-white/80 text-sm mt-1">*Baseado na média dos clientes ativos na plataforma</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Main Features */}
+        <section id="features" className="py-20 md:py-28 bg-[var(--color-app-bg)]">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-14">
               <span className="text-xs font-black text-white bg-[var(--color-lime-primary)] px-3 py-1 rounded-full uppercase tracking-widest">Funcionalidades</span>
-              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-4 mb-3">Por que escolher o Foodbio?</h2>
-              <p className="text-gray-500 max-w-lg mx-auto">Tudo que você precisa para uma experiência de delivery completa e sem complicações.</p>
+              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-4 mb-3">Tudo que seu restaurante precisa</h2>
+              <p className="text-gray-500 max-w-lg mx-auto">Módulos integrados que funcionam juntos para você vender mais com menos esforço.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[
                 {
-                  icon: Clock,
-                  bg: 'bg-[var(--color-lime-primary)]',
+                  icon: Monitor,
+                  color: 'bg-[var(--color-lime-primary)]',
                   ic: 'text-white',
-                  title: 'Entrega expressa',
-                  desc: 'Acompanhe seu pedido em tempo real, desde o preparo até a sua porta.',
+                  title: 'PDV Profissional',
+                  desc: 'Frente de caixa completa para atendimento presencial.',
+                  items: [
+                    'Abertura e fechamento de caixa por turno',
+                    'Gestão de mesas com status em tempo real',
+                    'Múltiplas formas de pagamento + troco',
+                  ],
                 },
                 {
-                  icon: Shield,
-                  bg: 'bg-[var(--color-app-bg)]',
-                  ic: 'text-[var(--color-lime-primary)]',
-                  title: 'Pagamento seguro',
-                  desc: 'Tokenização de cartão exclusivamente no browser. Seus dados nunca passam pelos nossos servidores.',
+                  icon: Utensils,
+                  color: 'bg-orange-50',
+                  ic: 'text-orange-500',
+                  title: 'KDS — Display da Cozinha',
+                  desc: 'Monitor inteligente para a equipe de produção.',
+                  items: [
+                    'Pedidos separados por online e PDV',
+                    'Temporizador de preparo por item',
+                    'Atualização em tempo real via WebSocket',
+                  ],
                 },
                 {
-                  icon: MapPin,
-                  bg: 'bg-blue-50',
+                  icon: QrCode,
+                  color: 'bg-blue-50',
                   ic: 'text-blue-500',
-                  title: 'Rastreamento em tempo real',
-                  desc: 'Veja exatamente onde seu entregador está e quando chega.',
+                  title: 'Cardápio Digital com QR Code',
+                  desc: 'Link e QR Code únicos para cada restaurante.',
+                  items: [
+                    'URL exclusiva (seurestaurante.foodbio.app)',
+                    'Categorias, produtos e fotos no painel',
+                    'Grupos de opcionais e adicionais por produto',
+                  ],
                 },
                 {
-                  icon: Star,
-                  bg: 'bg-amber-50',
-                  ic: 'text-amber-500',
-                  title: 'Avaliações verificadas',
-                  desc: 'Só avalia quem comprou. Opiniões reais de clientes reais.',
-                },
-                {
-                  icon: Smartphone,
-                  bg: 'bg-purple-50',
+                  icon: Bike,
+                  color: 'bg-purple-50',
                   ic: 'text-purple-500',
-                  title: 'App mobile-first',
-                  desc: 'Interface otimizada para celular, tablet e desktop.',
+                  title: 'Pedidos Online',
+                  desc: 'Receba pedidos pela internet com pagamento integrado.',
+                  items: [
+                    'Cálculo automático de taxa por CEP',
+                    'Integração MercadoPago e PicPay',
+                    'Notificação WhatsApp automática ao cliente',
+                  ],
                 },
                 {
-                  icon: Zap,
-                  bg: 'bg-emerald-50',
+                  icon: BarChart3,
+                  color: 'bg-emerald-50',
                   ic: 'text-emerald-500',
-                  title: 'Atualização instantânea',
-                  desc: 'Status do pedido atualizado ao vivo via WebSocket.',
+                  title: 'Relatórios e Financeiro',
+                  desc: 'Visão completa do desempenho do seu negócio.',
+                  items: [
+                    'Faturamento por método de pagamento',
+                    'Relatório de splits e repasses',
+                    'Resumo de turno com saldo esperado',
+                  ],
+                },
+                {
+                  icon: Users,
+                  color: 'bg-rose-50',
+                  ic: 'text-rose-500',
+                  title: 'Gestão de Equipe',
+                  desc: 'Controle de acesso por função para cada colaborador.',
+                  items: [
+                    'Funções: gerente, caixa, cozinheiro, garçom',
+                    'Login individual com permissões por módulo',
+                    'Histórico de ações por usuário',
+                  ],
                 },
               ].map((feat) => (
                 <div key={feat.title} className="bg-white rounded-2xl p-6 border border-gray-100 hover:border-[var(--color-lime-primary)]/30 hover:shadow-md transition-all">
-                  <div className={`w-12 h-12 ${feat.bg} rounded-xl flex items-center justify-center mb-4`}>
+                  <div className={`w-12 h-12 ${feat.color} rounded-xl flex items-center justify-center mb-4`}>
                     <feat.icon className={`w-5 h-5 ${feat.ic}`} />
                   </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{feat.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{feat.desc}</p>
+                  <h3 className="font-bold text-gray-900 mb-1">{feat.title}</h3>
+                  <p className="text-sm text-gray-400 mb-4">{feat.desc}</p>
+                  <ul className="space-y-2">
+                    {feat.items.map((item) => (
+                      <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-[var(--color-lime-primary)] shrink-0 mt-0.5" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
@@ -177,24 +273,24 @@ export default function LandingPage() {
         </section>
 
         {/* How it works */}
-        <section id="how-it-works" className="py-20 md:py-28 bg-[var(--color-app-bg)]">
+        <section id="how-it-works" className="py-20 md:py-28 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-14">
               <span className="text-xs font-black text-white bg-[var(--color-lime-primary)] px-3 py-1 rounded-full uppercase tracking-widest">Como funciona</span>
-              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-4 mb-3">Pedir é simples assim</h2>
-              <p className="text-gray-500 max-w-lg mx-auto">Do cardápio à sua porta em poucos passos.</p>
+              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-4 mb-3">Do cadastro à primeira venda em minutos</h2>
+              <p className="text-gray-500 max-w-lg mx-auto">Configure seu restaurante e comece a receber pedidos hoje mesmo.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
               <div className="hidden md:block absolute top-10 left-[12.5%] right-[12.5%] h-0.5 bg-orange-100 z-0" />
               {[
-                { step: '01', title: 'Escolha o restaurante', desc: 'Navegue por centenas de opções próximas a você.' },
-                { step: '02', title: 'Monte seu pedido', desc: 'Selecione itens, personalize e adicione ao carrinho.' },
-                { step: '03', title: 'Pague com segurança', desc: 'Cartão, Pix ou dinheiro — você escolhe.' },
-                { step: '04', title: 'Acompanhe ao vivo', desc: 'Rastreamento em tempo real até a entrega.' },
+                { step: '01', title: 'Crie sua conta', desc: 'Cadastre-se, defina o slug do seu restaurante e acesse o painel administrativo.' },
+                { step: '02', title: 'Monte seu cardápio', desc: 'Cadastre categorias, produtos, fotos e grupos de opcionais pelo painel.' },
+                { step: '03', title: 'Ative os módulos', desc: 'Ligue PDV, KDS e cardápio digital. Configure pagamentos em minutos.' },
+                { step: '04', title: 'Comece a vender', desc: 'Seu link está no ar. Receba pedidos e gerencie tudo pelo painel ao vivo.' },
               ].map((s) => (
                 <div key={s.step} className="relative z-10 flex flex-col items-center text-center">
-                  <div className="w-20 h-20 rounded-full bg-white border-4 border-[var(--color-lime-primary)]/20 flex items-center justify-center mb-4 shadow-sm">
+                  <div className="w-20 h-20 rounded-full bg-[var(--color-app-bg)] border-4 border-[var(--color-lime-primary)]/20 flex items-center justify-center mb-4 shadow-sm">
                     <span className="text-2xl font-black text-[var(--color-lime-primary)]">{s.step}</span>
                   </div>
                   <h3 className="font-bold text-gray-900 mb-2">{s.title}</h3>
@@ -215,28 +311,67 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* For restaurants */}
-        <section id="partners" className="py-20 md:py-28 bg-white">
+        {/* Segments */}
+        <section id="segments" className="py-20 md:py-28 bg-[var(--color-app-bg)]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="text-center mb-14">
+              <span className="text-xs font-black text-white bg-[var(--color-lime-primary)] px-3 py-1 rounded-full uppercase tracking-widest">Segmentos</span>
+              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-4 mb-3">
+                Para restaurantes, bares, pizzarias e muito mais
+              </h2>
+              <p className="text-gray-500 max-w-lg mx-auto">Cada segmento tem seu fluxo. O Foodbio se adapta ao seu modelo de negócio.</p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+              {[
+                { emoji: '🍕', title: 'Pizzarias', desc: 'Opcionais de sabor, tamanho e borda com lógica de preço automática.' },
+                { emoji: '🍔', title: 'Hamburguerias', desc: 'Montagem de combo, adicionais e ingredientes por item.' },
+                { emoji: '☕', title: 'Cafeterias', desc: 'Cardápio visual atraente com opções quentes, frias e sazonais.' },
+                { emoji: '🌮', title: 'Lanchonetes', desc: 'Atendimento rápido no balcão com PDV ágil e integrado.' },
+                { emoji: '🍺', title: 'Bares', desc: 'Gestão de mesas com comanda por mesa e fechamento fácil.' },
+                { emoji: '🚚', title: 'Food Trucks', desc: 'Cardápio digital via QR Code sem precisar de estrutura fixa.' },
+                { emoji: '🍰', title: 'Doceiras', desc: 'Pedidos online com agendamento e retirada no local.' },
+                { emoji: '🥩', title: 'Churrascarias', desc: 'Controle por mesa, rodízio e lançamentos por garçom.' },
+              ].map((seg) => (
+                <div key={seg.title} className="bg-white rounded-2xl p-5 border border-gray-100 hover:border-[var(--color-lime-primary)]/30 hover:shadow-sm transition-all text-center">
+                  <div className="text-3xl mb-2">{seg.emoji}</div>
+                  <h3 className="font-bold text-gray-900 text-sm mb-1">{seg.title}</h3>
+                  <p className="text-xs text-gray-400 leading-relaxed">{seg.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-center text-sm text-gray-400">Cada módulo é personalizável para atender as necessidades específicas do seu negócio.</p>
+          </div>
+        </section>
+
+        {/* PDV integration + dashboard preview */}
+        <section className="py-20 md:py-28 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <span className="text-xs font-black text-white bg-[var(--color-lime-primary)] px-3 py-1 rounded-full uppercase tracking-widest">Para restaurantes</span>
+                <span className="text-xs font-black text-white bg-[var(--color-lime-primary)] px-3 py-1 rounded-full uppercase tracking-widest">Painel administrativo</span>
                 <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-6 mb-4 leading-tight">
-                  Leve seu restaurante<br />para o digital hoje.
+                  PDV integrado ao financeiro e à cozinha
                 </h2>
                 <p className="text-gray-500 leading-relaxed mb-8">
-                  Painel completo de gestão de pedidos, cardápio digital, controle de entregas e relatórios financeiros.
+                  Tudo centralizado: vendas do salão, delivery online e retirada no balcão em um único painel. Nenhum pedido perdido, nenhum caixa fechado no chute.
                 </p>
-                <div className="grid grid-cols-2 gap-3 mb-8">
+                <div className="space-y-4 mb-8">
                   {[
-                    { icon: ChefHat, label: 'Painel do restaurante' },
-                    { icon: Bike, label: 'Gestão de entregadores' },
-                    { icon: Star, label: 'Relatórios detalhados' },
-                    { icon: Shield, label: 'Pagamento split' },
+                    { icon: TrendingUp, label: 'Vendas automatizadas', desc: 'Pedido confirmado entra direto na comanda e no caixa.' },
+                    { icon: CreditCard, label: 'Múltiplos métodos de pagamento', desc: 'Dinheiro, cartão, Pix, MercadoPago e PicPay integrados.' },
+                    { icon: BarChart3, label: 'Relatórios em tempo real', desc: 'Faturamento por hora, método e turno — sempre atualizado.' },
+                    { icon: MessageSquare, label: 'Notificação automática', desc: 'Cliente recebe status do pedido via WhatsApp sem esforço manual.' },
                   ].map((item) => (
-                    <div key={item.label} className="flex items-center gap-2.5 bg-[var(--color-app-bg)] rounded-xl px-4 py-3 border border-[var(--color-lime-primary)]/10">
-                      <item.icon className="w-4 h-4 text-[var(--color-lime-primary)] shrink-0" />
-                      <span className="text-sm font-semibold text-gray-800">{item.label}</span>
+                    <div key={item.label} className="flex items-start gap-3">
+                      <div className="w-9 h-9 bg-[var(--color-app-bg)] rounded-xl flex items-center justify-center shrink-0">
+                        <item.icon className="w-4 h-4 text-[var(--color-lime-primary)]" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">{item.label}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -244,12 +379,12 @@ export default function LandingPage() {
                   href="/login"
                   className="inline-flex items-center gap-2 bg-[var(--color-lime-primary)] text-white font-black text-sm px-6 py-3.5 rounded-xl hover:brightness-90 transition-all shadow-md shadow-[var(--color-lime-primary)]/20"
                 >
-                  Acessar painel
+                  Ver painel na prática
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
 
-              {/* Dashboard preview card */}
+              {/* Dashboard preview */}
               <div className="relative">
                 <div className="bg-white rounded-3xl p-6 border-2 border-orange-100 shadow-xl shadow-orange-50">
                   <div className="flex items-center justify-between mb-6">
@@ -294,16 +429,83 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* CTA final */}
+        {/* FAQ */}
+        <section id="faq" className="py-20 md:py-28 bg-[var(--color-app-bg)]">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6">
+            <div className="text-center mb-14">
+              <span className="text-xs font-black text-white bg-[var(--color-lime-primary)] px-3 py-1 rounded-full uppercase tracking-widest">FAQ</span>
+              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-4 mb-3">Dúvidas frequentes</h2>
+              <p className="text-gray-500">Tudo que você precisa saber antes de começar.</p>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                {
+                  q: 'O Foodbio funciona para restaurante físico e delivery ao mesmo tempo?',
+                  a: 'Sim. O Foodbio integra PDV presencial (salão e balcão) com pedidos online de delivery e retirada. Tudo aparece no mesmo painel e vai para a mesma cozinha.',
+                },
+                {
+                  q: 'Preciso instalar algum programa?',
+                  a: 'Não. O Foodbio é 100% web. Funciona em qualquer navegador moderno — tablet, computador ou celular. Sem instalação, sem atualização manual.',
+                },
+                {
+                  q: 'Quais formas de pagamento são aceitas?',
+                  a: 'Dinheiro, cartão de crédito/débito, Pix, MercadoPago e PicPay. Para pagamentos online, basta conectar sua conta MercadoPago nas configurações.',
+                },
+                {
+                  q: 'O cardápio digital precisa de aplicativo para o cliente?',
+                  a: 'Não. Seu cliente acessa pelo navegador do celular via QR Code ou link. Nenhum app precisa ser instalado.',
+                },
+                {
+                  q: 'Posso ter mais de um restaurante na mesma conta?',
+                  a: 'Sim. O Foodbio suporta múltiplos estabelecimentos. Cada restaurante tem seu próprio cardápio, slug, equipe e painel independente.',
+                },
+                {
+                  q: 'Como funciona o KDS (display de cozinha)?',
+                  a: 'O KDS é um monitor separado para a equipe de produção. Pedidos online e do PDV aparecem automaticamente com temporizador. A cozinha atualiza o status e o painel reflete em tempo real.',
+                },
+                {
+                  q: 'Os dados ficam seguros?',
+                  a: 'Sim. Toda a comunicação usa HTTPS e os dados ficam em bancos isolados por restaurante. Pagamentos são processados diretamente pelo MercadoPago — nenhum dado de cartão passa pelo Foodbio.',
+                },
+              ].map((item) => (
+                <details key={item.q} className="group bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                  <summary className="flex items-center justify-between gap-4 px-6 py-4 cursor-pointer font-bold text-gray-900 list-none hover:text-[var(--color-lime-primary)] transition-colors">
+                    {item.q}
+                    <ChevronDown className="w-5 h-5 shrink-0 text-gray-400 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="px-6 pb-5">
+                    <p className="text-sm text-gray-500 leading-relaxed">{item.a}</p>
+                  </div>
+                </details>
+              ))}
+            </div>
+
+            <div className="text-center mt-10">
+              <p className="text-sm text-gray-400 mb-4">Ainda tem dúvidas?</p>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 bg-[var(--color-lime-primary)] text-white font-black text-sm px-6 py-3.5 rounded-xl hover:brightness-90 transition-all"
+              >
+                Falar com a equipe
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Final CTA */}
         <section className="py-20 bg-[var(--color-lime-primary)]">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
-            <h2 className="text-3xl md:text-4xl font-black text-white mb-4">Pronto para pedir?</h2>
-            <p className="text-white/80 mb-8">Faça login para acessar o cardápio do seu restaurante favorito.</p>
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
+              Pronto para transformar a gestão do seu restaurante?
+            </h2>
+            <p className="text-white/80 mb-8 text-lg">Configure em minutos. Suporte especializado. Sem compromisso.</p>
             <Link
               href="/login"
               className="inline-flex items-center gap-2.5 bg-white text-[var(--color-lime-primary)] font-black text-base px-10 py-4 rounded-2xl hover:bg-orange-50 transition-colors shadow-xl"
             >
-              Entrar agora
+              Começar gratuitamente
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -311,19 +513,46 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-50 border-t border-gray-100 py-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-[var(--color-lime-primary)] rounded-lg flex items-center justify-center">
-              <span className="text-white font-black text-xs">F</span>
+      <footer className="bg-gray-50 border-t border-gray-100 py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 bg-[var(--color-lime-primary)] rounded-lg flex items-center justify-center">
+                  <span className="text-white font-black text-xs">F</span>
+                </div>
+                <span className="font-black text-gray-900 text-sm">Foodbio</span>
+              </div>
+              <p className="text-xs text-gray-400 leading-relaxed">Sistema ERP completo para restaurantes — PDV, delivery e cardápio digital em uma única plataforma.</p>
             </div>
-            <span className="font-black text-gray-900 text-sm">Foodbio</span>
+            <div>
+              <p className="font-bold text-gray-900 text-sm mb-3">Produto</p>
+              <ul className="space-y-2">
+                {['PDV', 'KDS — Cozinha', 'Cardápio Digital', 'Pedidos Online', 'Relatórios'].map((l) => (
+                  <li key={l}><a href="#features" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">{l}</a></li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-sm mb-3">Segmentos</p>
+              <ul className="space-y-2">
+                {['Restaurantes', 'Pizzarias', 'Hamburguerias', 'Bares', 'Food Trucks', 'Cafeterias'].map((l) => (
+                  <li key={l}><a href="#segments" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">{l}</a></li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-sm mb-3">Empresa</p>
+              <ul className="space-y-2">
+                {['Sobre', 'Contato', 'Privacidade', 'Termos de Uso'].map((l) => (
+                  <li key={l}><a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">{l}</a></li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 font-medium">© 2026 Foodbio. Todos os direitos reservados.</p>
-          <div className="flex gap-6">
-            <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors font-medium">Privacidade</a>
-            <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors font-medium">Termos</a>
-            <Link href="/login" className="text-xs text-[var(--color-lime-primary)] hover:brightness-90 transition-all font-bold">Login</Link>
+          <div className="border-t border-gray-100 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-gray-400 font-medium">© 2026 Foodbio. Todos os direitos reservados.</p>
+            <Link href="/login" className="text-xs text-[var(--color-lime-primary)] hover:brightness-90 transition-all font-bold">Acessar painel →</Link>
           </div>
         </div>
       </footer>
