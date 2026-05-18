@@ -37,6 +37,7 @@ model Tenant {
   products       Product[]
   categories     Category[]
   orders         Order[]
+  tables         Table[]
 
   @@index([slug])
   @@index([city, state, active])
@@ -154,10 +155,51 @@ model Option {
   group OptionGroup @relation(fields: [groupId], references: [id])
 }
 
+model Table {
+  id       String  @id @default(uuid())
+  tenantId String
+  number   Int
+  capacity Int     @default(4)
+  label    String?
+  status   String  @default("free") // free | occupied | waiting_payment
+  active   Boolean @default(true)
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  orders   Order[]
+
+  @@index([tenantId, status])
+  @@unique([tenantId, number])
+}
+
+model CashSession {
+  id            String         @id @default(uuid())
+  tenantId      String
+  operatorId    String
+  openedAt      DateTime       @default(now())
+  closedAt      DateTime?
+  initialAmount Float          @default(0)
+  closeAmount   Float?
+  status        String         @default("open") // open | closed
+  movements     CashMovement[]
+
+  @@index([tenantId, status])
+}
+
+model CashMovement {
+  id        String      @id @default(uuid())
+  sessionId String
+  type      String      // bleed | supply
+  amount    Float
+  reason    String
+  createdAt DateTime    @default(now())
+  session   CashSession @relation(fields: [sessionId], references: [id])
+}
+
 model Order {
   id                String    @id @default(uuid())
   tenantId          String
   customerId        String?
+  tableId           String?
+  cashSessionId     String?
   type              String    @default("delivery") // delivery | pickup | in_store
   status            String    @default("pending")
   // pending | confirmed | preparing | ready | dispatched | delivered | cancelled
@@ -179,6 +221,7 @@ model Order {
 
   tenant             Tenant              @relation(fields: [tenantId], references: [id])
   customer           Customer?           @relation(fields: [customerId], references: [id])
+  table              Table?              @relation(fields: [tableId], references: [id])
   items              OrderItem[]
   delivery           Delivery?
   paymentTransaction PaymentTransaction?
