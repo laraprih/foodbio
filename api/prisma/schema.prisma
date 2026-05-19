@@ -214,6 +214,7 @@ model Order {
   deliveryAddress   Json?
   customerName      String?
   customerPhone     String?
+  waiterName        String?   // preenchido quando pedido vem do módulo garçom
   notes             String?
   cancelReason      String?
   createdAt         DateTime  @default(now())

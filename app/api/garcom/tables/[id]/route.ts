@@ -26,7 +26,7 @@ export async function GET(
   const { rows: orders } = await pool.query(
     `SELECT
        o.id, o.status, o."paymentStatus", o.total, o.subtotal, o.discount,
-       o."customerName", o."createdAt",
+       o."customerName", o."waiterName", o."createdAt",
        json_agg(
          json_build_object(
            'id',         oi.id,
@@ -46,7 +46,8 @@ export async function GET(
      JOIN "OrderItem" oi ON oi."orderId" = o.id
      JOIN "Product" p ON p.id = oi."productId"
      WHERE o."tableId" = $1
-       AND o.status NOT IN ('delivered','cancelled')
+       AND o."paymentStatus" = 'pending'
+       AND o.status != 'cancelled'
      GROUP BY o.id
      ORDER BY o."createdAt" ASC`,
     [id]

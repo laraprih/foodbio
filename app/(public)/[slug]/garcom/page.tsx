@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSectionAuth } from '@/hooks/use-section-auth'
+import { useSocket } from '@/hooks/use-socket'
 import { toast } from 'react-hot-toast'
 
 import { GarcomNavbar } from '@/components/garcom/GarcomNavbar'
@@ -32,6 +33,32 @@ export default function GarcomPage() {
   const qc = useQueryClient()
 
   const { user, status, logout } = useSectionAuth('garcom')
+
+  // Notificações em tempo real via socket
+  useSocket(user?.tenantId ? `garcom:${user.tenantId}` : undefined, {
+    order_ready_for_table: (data: any) => {
+      toast(`🍽️ ${data.message ?? `Mesa ${data.tableNumber} está pronta!`}`, {
+        duration: 8000,
+        style: { background: '#1a1a1a', color: '#a3e635', fontWeight: 'bold' },
+      })
+      // Som de notificação
+      try {
+        const ctx = new AudioContext()
+        ;[0, 0.15, 0.3].forEach(t => {
+          const osc = ctx.createOscillator()
+          const g   = ctx.createGain()
+          osc.connect(g); g.connect(ctx.destination)
+          osc.frequency.value = 1046
+          g.gain.setValueAtTime(0.4, ctx.currentTime + t)
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.2)
+          osc.start(ctx.currentTime + t)
+          osc.stop(ctx.currentTime + t + 0.2)
+        })
+      } catch { /* AudioContext pode estar bloqueado */ }
+      qc.invalidateQueries({ queryKey: ['garcom-tables'] })
+      qc.invalidateQueries({ queryKey: ['garcom-table'] })
+    },
+  })
 
   const [view, setView]                   = useState<GarcomView>('tables')
   const [selectedTable, setSelectedTable] = useState<GarcomTable | null>(null)

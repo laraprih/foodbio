@@ -74,13 +74,14 @@ export async function POST(req: NextRequest) {
       `INSERT INTO "Order" (
          id, "tenantId", type, status, total, subtotal,
          "deliveryFee", discount, "paymentStatus", "tableId",
-         "customerName", notes, "createdAt", "updatedAt"
-       ) VALUES ($1,$2,'in_store','confirmed',$3,$3,0,0,'pending',$4,$5,$6,NOW(),NOW())`,
+         "customerName", "waiterName", notes, "createdAt", "updatedAt"
+       ) VALUES ($1,$2,'in_store','confirmed',$3,$3,0,0,'pending',$4,$5,$6,$7,NOW(),NOW())`,
       [
         orderId, session.tenantId,
         subtotal,
         tableId,
         customerName?.trim() || `Mesa ${tableRows[0].number ?? ''}`,
+        session.name,          // nome do garçom salvo no pedido
         notes?.trim() || null,
       ]
     )

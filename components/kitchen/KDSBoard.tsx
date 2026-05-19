@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { get, patch } from '@/lib/api-client'
+import { get } from '@/lib/api-client'
 import KDSCard from './KDSCard'
 import Spinner from '@/components/ui/Spinner'
 import { toast } from 'react-hot-toast'
@@ -15,9 +15,9 @@ interface KDSBoardProps {
 }
 
 const COLUMNS = [
-  { id: OrderStatus.CONFIRMED, label: 'Novos Pedidos', nextStatus: OrderStatus.PREPARING, color: 'bg-blue-50 border-blue-200' },
-  { id: OrderStatus.PREPARING, label: 'Em Preparo', nextStatus: OrderStatus.READY, color: 'bg-yellow-50 border-yellow-200' },
-  { id: OrderStatus.READY, label: 'Prontos', nextStatus: null, color: 'bg-green-50 border-green-200' },
+  { id: OrderStatus.CONFIRMED, label: 'Novos Pedidos',  nextStatus: OrderStatus.PREPARING, color: 'bg-blue-50 border-blue-200' },
+  { id: OrderStatus.PREPARING, label: 'Em Preparo',     nextStatus: OrderStatus.READY,     color: 'bg-yellow-50 border-yellow-200' },
+  { id: OrderStatus.READY,     label: 'Prontos',        nextStatus: null,                  color: 'bg-green-50 border-green-200' },
 ]
 
 export default function KDSBoard({ tenantId }: KDSBoardProps) {
@@ -39,23 +39,56 @@ export default function KDSBoard({ tenantId }: KDSBoardProps) {
   })
   const orders: Order[] = Array.isArray(rawOrders) ? rawOrders : []
 
+  // Atualiza status via Next.js route (com lógica de notificação ao garçom)
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      patch<any>(`/bff/api/kitchen/orders/${id}/${status === 'preparing' ? 'start' : 'ready'}`, {}),
+      fetch(`/api/kitchen/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      }).then(async r => {
+        if (!r.ok) {
+          const body = await r.json().catch(() => ({}))
+          throw new Error(body.error ?? 'Erro ao atualizar pedido')
+        }
+        return r.json()
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['kds-orders', tenantId] }),
-    onError: () => toast.error('Erro ao atualizar pedido'),
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  // "Servido na Mesa" — muda status para dispatched e sai do KDS
+  const servedAtTable = useMutation({
+    mutationFn: (id: string) =>
+      fetch(`/api/kitchen/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'dispatched' }),
+      }).then(async r => {
+        if (!r.ok) throw new Error('Erro ao marcar como servido')
+        return r.json()
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kds-orders', tenantId] })
+      toast.success('Mesa servida!')
+    },
+    onError: () => toast.error('Erro ao marcar como servido'),
   })
 
   const cancelOrder = useMutation({
     mutationFn: (id: string) =>
-      patch<any>(`/bff/api/admin/orders/${id}/status`, { status: 'cancelled' }),
+      fetch(`/api/kitchen/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' }),
+      }).then(r => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kds-orders', tenantId] })
       toast.success('Pedido cancelado')
     },
   })
 
-  // Sound alert on new orders
+  // Alerta sonoro para novos pedidos
   useEffect(() => {
     const confirmed = orders.filter((o: any) => o.status === 'confirmed').length
     if (confirmed > prevCountRef.current) playAlert()
@@ -77,7 +110,7 @@ export default function KDSBoard({ tenantId }: KDSBoardProps) {
       osc.start()
       osc.stop(ctx.currentTime + 0.4)
     } catch {
-      // AudioContext blocked by browser policy until user interaction — safe to ignore
+      // AudioContext bloqueado pelo navegador até interação do usuário
     }
   }
 
@@ -126,11 +159,13 @@ export default function KDSBoard({ tenantId }: KDSBoardProps) {
                   <KDSCard
                     key={order.id}
                     order={order}
-                    onComplete={(id) =>
+                    isReadyColumn={col.id === OrderStatus.READY}
+                    onAdvance={(id) =>
                       col.nextStatus
                         ? updateStatus.mutate({ id, status: col.nextStatus })
                         : undefined
                     }
+                    onServedAtTable={(id) => servedAtTable.mutate(id)}
                     onCancel={(id) => cancelOrder.mutate(id)}
                   />
                 ))}

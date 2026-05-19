@@ -43,12 +43,12 @@ export async function POST(req: NextRequest) {
       `UPDATE "Order"
        SET "paymentStatus" = 'approved',
            "paymentMethod" = $1,
-           "status" = 'delivered',
-           "updatedAt" = NOW()
-       WHERE "tableId" = $2
-         AND "tenantId" = $3
-         AND status NOT IN ('delivered', 'cancelled')
+           "status"        = 'delivered',
+           "updatedAt"     = NOW()
+       WHERE "tableId"      = $2
+         AND "tenantId"     = $3
          AND "paymentStatus" = 'pending'
+         AND status         != 'cancelled'
        RETURNING id, total`,
       [paymentMethod, tableId, session.tenantId]
     )
