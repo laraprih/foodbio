@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPool } from '@/lib/db'
 import { getWaiterSession } from '@/lib/waiter-auth'
 import { serverEmit } from '@/lib/server-emit'
+import { sendOrderConfirmation, normalizeWhatsAppPhone } from '@/lib/whatsapp'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,6 +83,12 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // WhatsApp: notifica clientes com número verificado (fire-and-forget)
+    if (updatedOrders.length > 0) {
+      const tenantId = updatedOrders[0].tenantId as string
+      notifyTableWhatsApp(pool, updatedOrders, tableId, tenantId).catch(() => {})
+    }
+
     return NextResponse.json({ ok: true, ordersUpdated, totalPaid })
   } catch (err) {
     await client.query('ROLLBACK')
@@ -89,5 +96,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Erro ao processar pagamento' }, { status: 500 })
   } finally {
     client.release()
+  }
+}
+
+async function notifyTableWhatsApp(pool: any, orders: any[], tableId: string, tenantId: string) {
+  const tenantRes = await pool.query(
+    `SELECT name, slug FROM "Tenant" WHERE id = $1`, [tenantId]
+  )
+  const tenant = tenantRes.rows[0]
+  if (!tenant) return
+
+  // Notifica pelo primeiro pedido da mesa que tenha telefone verificado
+  for (const order of orders) {
+    const orderData = await pool.query(
+      `SELECT "customerPhone", "customerName" FROM "Order" WHERE id = $1`,
+      [order.id]
+    )
+    const o = orderData.rows[0]
+    if (!o?.customerPhone) continue
+
+    const phone = normalizeWhatsAppPhone(o.customerPhone)
+    const { rows: vRows } = await pool.query(
+      `SELECT verified FROM "WhatsAppVerification" WHERE phone = $1`, [phone]
+    )
+    if (!vRows[0]?.verified) continue
+
+    await sendOrderConfirmation({
+      phone,
+      customerName: o.customerName ?? '',
+      orderId:      order.id,
+      orderCode:    order.id.slice(-8).toUpperCase(),
+      slug:         tenant.slug,
+      tenantName:   tenant.name,
+    })
+    break // envia só uma vez por mesa
   }
 }

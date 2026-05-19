@@ -6,10 +6,114 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { checkoutSchema } from '@/lib/validations';
 import Input from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Truck, Store, CreditCard, Landmark, ArrowRight, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Truck, Store, CreditCard, Landmark, ArrowRight, Loader2, CheckCircle2, XCircle, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 import type { CheckoutData } from '@/types';
+
+// ── WhatsApp inline verification ─────────────────────────────────────────────
+type WaStep = 'idle' | 'sending' | 'code' | 'verifying' | 'done'
+
+function WhatsAppVerifier({ phone }: { phone: string }) {
+  const [step, setStep]   = useState<WaStep>('idle')
+  const [code, setCode]   = useState('')
+  const [error, setError] = useState('')
+
+  async function sendCode() {
+    if (!phone || phone.replace(/\D/g, '').length < 10) {
+      setError('Preencha o telefone antes de verificar.')
+      return
+    }
+    setStep('sending')
+    setError('')
+    const res = await fetch('/api/store/customer/whatsapp/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setError(data.error ?? 'Erro ao enviar código'); setStep('idle'); return }
+    setStep('code')
+  }
+
+  async function confirmCode() {
+    setStep('verifying')
+    setError('')
+    const res = await fetch('/api/store/customer/whatsapp/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code }),
+    })
+    const data = await res.json()
+    if (!res.ok || !data.verified) {
+      setError(data.error ?? 'Código inválido. Tente novamente.')
+      setStep('code')
+      return
+    }
+    setStep('done')
+  }
+
+  if (step === 'done') {
+    return (
+      <div className="flex items-center gap-2 text-emerald-600 text-xs font-semibold bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100">
+        <CheckCircle2 className="w-4 h-4 shrink-0" />
+        WhatsApp verificado! Você receberá atualizações sobre seu pedido.
+      </div>
+    )
+  }
+
+  if (step === 'code' || step === 'verifying') {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-gray-500">
+          Código enviado para <strong>{phone}</strong> via WhatsApp. Digite abaixo:
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={4}
+            value={code}
+            onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+            placeholder="0000"
+            className="w-24 border border-gray-200 rounded-xl px-3 py-2 text-center text-lg font-black tracking-widest focus:outline-none focus:border-lime-400"
+          />
+          <button
+            type="button"
+            onClick={confirmCode}
+            disabled={code.length < 4 || step === 'verifying'}
+            className="flex-1 h-10 rounded-xl bg-gray-900 text-white text-sm font-bold disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            {step === 'verifying' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            Confirmar
+          </button>
+        </div>
+        {error && <p className="text-xs text-red-500">{error}</p>}
+        <button type="button" onClick={() => setStep('idle')} className="text-xs text-gray-400 hover:underline">
+          Cancelar
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <button
+        type="button"
+        onClick={sendCode}
+        disabled={step === 'sending'}
+        className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-2 rounded-xl transition-colors disabled:opacity-60"
+      >
+        {step === 'sending'
+          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          : <MessageCircle className="w-3.5 h-3.5" />
+        }
+        {step === 'sending' ? 'Enviando…' : 'Verificar WhatsApp — receba atualizações do pedido'}
+      </button>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
+  )
+}
 
 interface CheckoutFormProps {
   onSubmit: (data: CheckoutData) => void;
@@ -34,6 +138,7 @@ export default function CheckoutForm({ onSubmit, loading, defaultName, defaultPh
 
   const deliveryType = watch('deliveryType');
   const paymentMethod = watch('paymentMethod');
+  const phoneValue    = watch('phone');
 
   const [cepStatus, setCepStatus] = useState<CepStatus>('idle');
   const cepRef = useRef('');
@@ -113,6 +218,7 @@ export default function CheckoutForm({ onSubmit, loading, defaultName, defaultPh
         </h3>
         <Input label="Nome Completo" placeholder="Como devemos te chamar?" error={errors.name?.message as string} {...register('name')} />
         <Input label="Telefone / WhatsApp" placeholder="(00) 00000-0000" error={errors.phone?.message as string} {...register('phone')} />
+        <WhatsAppVerifier phone={phoneValue ?? ''} />
       </div>
 
       {/* Address */}

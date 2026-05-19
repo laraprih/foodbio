@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { get, patch } from '@/lib/api-client';
 import MetricsCard from '@/components/admin/MetricsCard';
 import OrderList from '@/components/admin/OrderList';
+import WhatsAppWidget from '@/components/admin/WhatsAppWidget';
 import { DollarSign, ShoppingBag, TrendingUp, Users, RefreshCw, Store } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from 'react-hot-toast';
@@ -110,6 +111,11 @@ export default function DashboardPage() {
         </>
       ) : (
         <>
+          {/* WhatsApp connection */}
+          <div className="mb-6">
+            <WhatsAppWidget />
+          </div>
+
           {/* Metrics */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <MetricsCard
