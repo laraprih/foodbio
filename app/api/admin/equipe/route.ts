@@ -3,29 +3,9 @@ import { auth } from '@/lib/auth'
 import { requireAdmin } from '@/lib/session'
 import { getPool } from '@/lib/db'
 import argon2 from 'argon2'
+import { STAFF_ROLE_LABEL, STAFF_ROLE_SECTION } from '@/lib/constants'
 
 const STAFF_ROLES = ['cook', 'attendant', 'driver', 'waiter', 'manager', 'host', 'bartender']
-
-export const STAFF_ROLE_LABEL: Record<string, string> = {
-  attendant: 'Operador PDV',
-  cook:      'Cozinheiro',
-  driver:    'Entregador',
-  waiter:    'Garçom',
-  manager:   'Gerente',
-  host:      'Maître/Recepcionista',
-  bartender: 'Barman',
-}
-
-// Seções de acesso por cargo (roles sem seção ainda são organizacionais)
-export const STAFF_ROLE_SECTION: Record<string, string | null> = {
-  attendant: 'pdv',
-  cook:      'cozinha',
-  driver:    'entregas',
-  waiter:    'garcom',
-  manager:   null,
-  host:      null,
-  bartender: null,
-}
 
 export async function GET() {
   const session = await auth()

@@ -104,6 +104,16 @@ export const STAFF_ROLE_LABEL: Record<string, string> = {
   bartender: 'Barman',
 }
 
+export const STAFF_ROLE_SECTION: Record<string, string | null> = {
+  attendant: 'pdv',
+  cook:      'cozinha',
+  driver:    'entregas',
+  waiter:    'garcom',
+  manager:   null,
+  host:      null,
+  bartender: null,
+}
+
 // ── Garcom polling interval ───────────────────────────────────────────────────
 export const GARCOM_POLL_MS = 15_000
 
