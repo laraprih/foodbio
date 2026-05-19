@@ -5,19 +5,40 @@ import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { get, post, isApiError } from '@/lib/api-client'
 import { toast } from 'react-hot-toast'
-import { UserPlus, Trash2, ChefHat, Store, Bike, Eye, EyeOff } from 'lucide-react'
+import {
+  UserPlus, Trash2, ChefHat, Store, Bike,
+  UtensilsCrossed, Briefcase, Users, Wine, Eye, EyeOff,
+} from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { cn } from '@/lib/utils'
+import { STAFF_ROLE_LABEL, STAFF_ROLE_SECTION } from '@/lib/constants'
 
-const ROLE_META: Record<string, { label: string; icon: React.ElementType; color: string; loginPath: string }> = {
-  cook:      { label: 'Cozinheiro',  icon: ChefHat, color: 'bg-orange-100 text-orange-700', loginPath: 'cozinha/login' },
-  attendant: { label: 'Atendente',   icon: Store,   color: 'bg-blue-100 text-blue-700',     loginPath: 'pdv/login' },
-  driver:    { label: 'Entregador',  icon: Bike,    color: 'bg-green-100 text-green-700',   loginPath: 'entregador/login' },
+const ROLE_META: Record<string, {
+  icon: React.ElementType
+  color: string
+  bg: string
+}> = {
+  cook:      { icon: ChefHat,          color: 'text-orange-700', bg: 'bg-orange-100' },
+  attendant: { icon: Store,            color: 'text-blue-700',   bg: 'bg-blue-100'   },
+  driver:    { icon: Bike,             color: 'text-green-700',  bg: 'bg-green-100'  },
+  waiter:    { icon: UtensilsCrossed,  color: 'text-lime-700',   bg: 'bg-lime-100'   },
+  manager:   { icon: Briefcase,        color: 'text-purple-700', bg: 'bg-purple-100' },
+  host:      { icon: Users,            color: 'text-pink-700',   bg: 'bg-pink-100'   },
+  bartender: { icon: Wine,             color: 'text-rose-700',   bg: 'bg-rose-100'   },
 }
 
+const ALL_ROLES = Object.keys(ROLE_META)
+
 interface StaffMember {
-  id: string; name: string; email: string; role: string; active: boolean; createdAt: string
+  id: string
+  name: string
+  email: string
+  role: string
+  active: boolean
+  createdAt: string
+  roleLabel?: string
+  roleSection?: string | null
 }
 
 export default function EquipePage() {
@@ -27,7 +48,7 @@ export default function EquipePage() {
 
   const [showForm, setShowForm] = useState(false)
   const [showPass, setShowPass] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'cook' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'waiter' })
 
   const { data: staff, isLoading } = useQuery({
     queryKey: ['equipe'],
@@ -39,7 +60,7 @@ export default function EquipePage() {
     onSuccess: () => {
       toast.success('Funcionário criado com sucesso!')
       queryClient.invalidateQueries({ queryKey: ['equipe'] })
-      setForm({ name: '', email: '', password: '', role: 'cook' })
+      setForm({ name: '', email: '', password: '', role: 'waiter' })
       setShowForm(false)
     },
     onError: (err: any) => toast.error(err?.message ?? 'Erro ao criar funcionário'),
@@ -62,7 +83,7 @@ export default function EquipePage() {
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">Equipe</h1>
-          <p className="text-gray-500 font-medium">Gerencie cozinheiros, atendentes e entregadores.</p>
+          <p className="text-gray-500 font-medium">Gerencie garçons, cozinheiros, atendentes e mais.</p>
         </div>
         <Button variant="dark" onClick={() => setShowForm(v => !v)}>
           <UserPlus className="w-4 h-4 mr-2" />
@@ -119,10 +140,31 @@ export default function EquipePage() {
                 onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-lime-primary)] bg-white"
               >
-                <option value="cook">Cozinheiro</option>
-                <option value="attendant">Atendente (PDV)</option>
-                <option value="driver">Entregador</option>
+                <optgroup label="Atendimento">
+                  <option value="waiter">Garçom</option>
+                  <option value="host">Maître / Recepcionista</option>
+                  <option value="attendant">Operador PDV</option>
+                </optgroup>
+                <optgroup label="Cozinha & Bar">
+                  <option value="cook">Cozinheiro</option>
+                  <option value="bartender">Barman</option>
+                </optgroup>
+                <optgroup label="Logística">
+                  <option value="driver">Entregador</option>
+                </optgroup>
+                <optgroup label="Gestão">
+                  <option value="manager">Gerente</option>
+                </optgroup>
               </select>
+
+              {/* Dica de acesso */}
+              {STAFF_ROLE_SECTION[form.role] ? (
+                <p className="text-[11px] text-gray-400 mt-1.5">
+                  Login em: <span className="font-semibold text-gray-600">/{slug}/{STAFF_ROLE_SECTION[form.role]}/login</span>
+                </p>
+              ) : (
+                <p className="text-[11px] text-gray-400 mt-1.5">Cargo organizacional — sem acesso a seção específica ainda</p>
+              )}
             </div>
           </div>
           <div className="flex gap-3 justify-end">
@@ -159,34 +201,40 @@ export default function EquipePage() {
             <UserPlus className="w-7 h-7 text-gray-300" />
           </div>
           <p className="font-bold text-gray-600">Nenhum funcionário cadastrado</p>
-          <p className="text-gray-400 text-sm mt-1">Adicione cozinheiros, atendentes e entregadores</p>
+          <p className="text-gray-400 text-sm mt-1">Adicione garçons, cozinheiros, atendentes e mais</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {(['cook', 'attendant', 'driver'] as const).map(role => {
+        <div className="space-y-6">
+          {ALL_ROLES.map(role => {
             const members = staffArr.filter(s => s.role === role)
             if (members.length === 0) return null
             const meta = ROLE_META[role]
             const Icon = meta.icon
+            const label = STAFF_ROLE_LABEL[role] ?? role
+            const section = STAFF_ROLE_SECTION[role]
+
             return (
               <div key={role}>
                 <div className="flex items-center gap-2 mb-2 px-1">
-                  <Icon className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{meta.label}s</span>
-                  <span className="text-xs text-gray-300">· login: /{slug}/{meta.loginPath}</span>
+                  <Icon className={cn('w-4 h-4', meta.color)} />
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}s</span>
+                  {section
+                    ? <span className="text-xs text-gray-300">· login: /{slug}/{section}/login</span>
+                    : <span className="text-xs text-gray-300">· cargo organizacional</span>
+                  }
                 </div>
                 <div className="space-y-2">
                   {members.map(member => (
                     <div key={member.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4 shadow-sm">
-                      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', meta.color)}>
-                        <Icon className="w-5 h-5" />
+                      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', meta.bg)}>
+                        <Icon className={cn('w-5 h-5', meta.color)} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-gray-900 text-sm truncate">{member.name}</p>
                         <p className="text-xs text-gray-400 truncate">{member.email}</p>
                       </div>
-                      <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full shrink-0', meta.color)}>
-                        {meta.label}
+                      <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full shrink-0', meta.bg, meta.color)}>
+                        {label}
                       </span>
                       <button
                         onClick={() => {
