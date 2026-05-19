@@ -226,9 +226,9 @@ export default function OrderDetailModal({
             </div>
             <span className={cn(
               'inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-              PAYMENT_ORDER_STATUS_COLOR[order.paymentStatus] ?? 'bg-gray-100 text-gray-600'
+              PAYMENT_STATUS_COLOR[order.paymentStatus] ?? 'bg-gray-100 text-gray-600'
             )}>
-              {PAYMENT_ORDER_STATUS_LABEL[order.paymentStatus] ?? order.paymentStatus}
+              {PAYMENT_STATUS_LABEL[order.paymentStatus] ?? order.paymentStatus}
             </span>
           </div>
         </div>
