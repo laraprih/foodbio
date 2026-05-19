@@ -68,7 +68,7 @@ model User {
   passwordHash String?
   facebookId   String?  @unique
   avatarUrl    String?
-  role         String   @default("customer") // admin | attendant | cook | driver | customer
+  role         String   @default("customer") // admin | attendant | cook | driver | waiter | manager | host | bartender | customer | superadmin
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
 

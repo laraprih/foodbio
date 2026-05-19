@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/session'
 import { getPool } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Pool } from 'pg'
@@ -29,7 +30,7 @@ export async function PATCH(
   { params }: { params: Promise<{ groupId: string }> }
 ) {
   const session = await auth()
-  const tenantId = getAdminTenant(session)
+  const tenantId = requireAdmin(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const { groupId } = await params
@@ -65,7 +66,7 @@ export async function DELETE(
   { params }: { params: Promise<{ groupId: string }> }
 ) {
   const session = await auth()
-  const tenantId = getAdminTenant(session)
+  const tenantId = requireAdmin(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const { groupId } = await params

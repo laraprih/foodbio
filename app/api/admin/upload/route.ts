@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/session'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {

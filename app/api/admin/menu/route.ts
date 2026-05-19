@@ -1,16 +1,11 @@
 import { auth } from '@/lib/auth'
+import { requireStaff } from '@/lib/session'
 import { getPool } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
-function getAdminTenant(session: any): string | null {
-  const user = session?.user as any
-  if (!user || !['admin', 'attendant', 'cook'].includes(user.role) || !user.tenantId) return null
-  return user.tenantId
-}
-
 export async function GET() {
   const session = await auth()
-  const tenantId = getAdminTenant(session)
+  const tenantId = requireStaff(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const pool = getPool()

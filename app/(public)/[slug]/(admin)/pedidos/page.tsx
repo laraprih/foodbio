@@ -5,40 +5,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { get, patch, isApiError } from '@/lib/api-client'
 import { toast } from 'react-hot-toast'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { useSocket } from '@/hooks/use-socket'
-import { Clock, ChevronRight, CalendarDays, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react'
+import { Clock, ChevronRight, CalendarDays, ChevronLeft } from 'lucide-react'
 import OrderDetailModal from '@/components/admin/OrderDetailModal'
-import { formatCurrency } from '@/lib/utils'
 import useSessionStore from '@/store/session-store'
+import { ORDER_STATUS_COLOR, ORDER_STATUS_LABEL } from '@/lib/constants'
 
 const STATUS_TABS = [
-  { id: 'all', label: 'Todos' },
-  { id: 'pending', label: 'Pendentes' },
+  { id: 'all',       label: 'Todos' },
+  { id: 'pending',   label: 'Pendentes' },
   { id: 'confirmed', label: 'Confirmados' },
   { id: 'preparing', label: 'Preparo' },
-  { id: 'ready', label: 'Prontos' },
+  { id: 'ready',     label: 'Prontos' },
   { id: 'delivered', label: 'Entregues' },
   { id: 'cancelled', label: 'Cancelados' },
 ]
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-gray-100 text-gray-600',
-  confirmed: 'bg-blue-100 text-blue-700',
-  preparing: 'bg-yellow-100 text-yellow-700',
-  ready: 'bg-orange-100 text-orange-700',
-  delivered: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-600',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pendente',
-  confirmed: 'Confirmado',
-  preparing: 'Preparando',
-  ready: 'Pronto',
-  delivered: 'Entregue',
-  cancelled: 'Cancelado',
-}
 
 function toISO(d: Date) {
   return d.toISOString().slice(0, 10)

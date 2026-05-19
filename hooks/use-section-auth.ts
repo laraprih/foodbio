@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 
-export type SectionType = 'pdv' | 'cozinha' | 'entregador'
+export type SectionType = 'pdv' | 'cozinha' | 'entregador' | 'garcom'
 
 export interface SectionUser {
   id: string
@@ -26,6 +26,7 @@ const LOGIN_PATH: Record<SectionType, string> = {
   pdv: 'pdv/login',
   cozinha: 'cozinha/login',
   entregador: 'entregador/login',
+  garcom: 'garcom/login',
 }
 
 export function useSectionAuth(section: SectionType): SectionAuth {

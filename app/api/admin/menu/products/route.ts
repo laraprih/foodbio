@@ -1,17 +1,12 @@
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/session'
 import { getPool } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 
-function getAdminTenant(session: any): string | null {
-  const user = session?.user as any
-  if (!user || user.role !== 'admin' || !user.tenantId) return null
-  return user.tenantId
-}
-
 export async function POST(req: NextRequest) {
   const session = await auth()
-  const tenantId = getAdminTenant(session)
+  const tenantId = requireAdmin(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const { name, description, price, categoryId, imageUrl, available, sortOrder, featured } = await req.json()

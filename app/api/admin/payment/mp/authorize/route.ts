@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 

@@ -2,18 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPool } from '@/lib/db'
 import { SignJWT, jwtVerify } from 'jose'
 
-type Section = 'pdv' | 'cozinha' | 'entregador'
+type Section = 'pdv' | 'cozinha' | 'entregador' | 'garcom'
 
 const SECTION_ROLE: Record<Section, string> = {
   pdv: 'attendant',
   cozinha: 'cook',
   entregador: 'driver',
+  garcom: 'waiter',
 }
 
 const SECTION_COOKIE: Record<Section, string> = {
   pdv: 'pdv_session',
   cozinha: 'cozinha_session',
   entregador: 'entregador_session',
+  garcom: 'garcom_session',
 }
 
 function secret() {

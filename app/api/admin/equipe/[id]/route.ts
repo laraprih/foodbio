@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/session'
 import { getPool } from '@/lib/db'
 
 export async function DELETE(
@@ -7,10 +8,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  const tenantId = (session?.user as any)?.tenantId
-  if (!tenantId || (session?.user as any)?.role !== 'admin') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const tenantId = requireAdmin(session)
+  if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const { id } = await params
   const pool = getPool()

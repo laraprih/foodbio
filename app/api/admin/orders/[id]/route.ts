@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireStaff } from '@/lib/session'
 import { getPool } from '@/lib/db'
 import { serverEmit } from '@/lib/server-emit'
 
@@ -15,18 +16,12 @@ const TRANSITIONS: Record<string, string[]> = {
   cancelled:  [],
 }
 
-function getTenantId(session: any): string | null {
-  const user = session?.user as any
-  if (!user || !['admin', 'attendant', 'cook'].includes(user.role) || !user.tenantId) return null
-  return user.tenantId
-}
-
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  const tenantId = getTenantId(session)
+  const tenantId = requireStaff(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const { id } = await params

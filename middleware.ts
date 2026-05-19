@@ -14,9 +14,10 @@ const SECTION_LOGIN: Record<string, string> = {
   cozinha:       'cozinha/login',
   pdv:           'pdv/login',
   entregas:      'entregador/login',
+  garcom:        'garcom/login',
 }
 
-// Cookie de sessão por seção (PDV/cozinha/entregador usam cookies próprios)
+// Cookie de sessão por seção (PDV/cozinha/entregador/garçom usam cookies próprios)
 const SECTION_COOKIE: Record<string, string> = {
   dashboard:     'authjs.session-token',
   pedidos:       'authjs.session-token',
@@ -28,6 +29,7 @@ const SECTION_COOKIE: Record<string, string> = {
   cozinha:       'cozinha_session',
   pdv:           'pdv_session',
   entregas:      'entregador_session',
+  garcom:        'garcom_session',
 }
 
 const ALL_SECTIONS = Object.keys(SECTION_LOGIN)
@@ -104,5 +106,6 @@ export const config = {
     '/:slug/cozinha(.*)',
     '/:slug/pdv(.*)',
     '/:slug/entregas(.*)',
+    '/:slug/garcom(.*)',
   ],
 }

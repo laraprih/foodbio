@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/session'
 import { getPool } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
-
-function getTenantId(session: any): string | null {
-  const user = session?.user as any
-  if (!user || user.role !== 'admin' || !user.tenantId) return null
-  return user.tenantId
-}
 
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  const tenantId = getTenantId(session)
+  const tenantId = requireAdmin(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const { id } = await params

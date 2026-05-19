@@ -112,12 +112,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update table status if dine-in
+    // Update table status if dine-in — validate ownership first
     if (tableId) {
-      await client.query(
-        `UPDATE "Table" SET status = 'occupied' WHERE id = $1 AND "tenantId" = $2`,
+      const { rows: tableRows } = await client.query(
+        `SELECT id FROM "Table" WHERE id = $1 AND "tenantId" = $2 AND active = true`,
         [tableId, pdvSession.tenantId]
       )
+      if (tableRows.length) {
+        await client.query(
+          `UPDATE "Table" SET status = 'occupied' WHERE id = $1`,
+          [tableId]
+        )
+      }
     }
 
     await client.query('COMMIT')

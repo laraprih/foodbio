@@ -1,16 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/session'
 import { getPool } from '@/lib/db'
 import argon2 from 'argon2'
 
-const STAFF_ROLES = ['cook', 'attendant', 'driver']
+const STAFF_ROLES = ['cook', 'attendant', 'driver', 'waiter', 'manager', 'host', 'bartender']
+
+export const STAFF_ROLE_LABEL: Record<string, string> = {
+  attendant: 'Operador PDV',
+  cook:      'Cozinheiro',
+  driver:    'Entregador',
+  waiter:    'Garçom',
+  manager:   'Gerente',
+  host:      'Maître/Recepcionista',
+  bartender: 'Barman',
+}
+
+// Seções de acesso por cargo (roles sem seção ainda são organizacionais)
+export const STAFF_ROLE_SECTION: Record<string, string | null> = {
+  attendant: 'pdv',
+  cook:      'cozinha',
+  driver:    'entregas',
+  waiter:    'garcom',
+  manager:   null,
+  host:      null,
+  bartender: null,
+}
 
 export async function GET() {
   const session = await auth()
-  const tenantId = (session?.user as any)?.tenantId
-  if (!tenantId || (session?.user as any)?.role !== 'admin') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const tenantId = requireAdmin(session)
+  if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const pool = getPool()
   const { rows } = await pool.query(
@@ -20,15 +40,20 @@ export async function GET() {
      ORDER BY role, name`,
     [tenantId, STAFF_ROLES]
   )
-  return NextResponse.json(rows)
+
+  const enriched = rows.map((r: any) => ({
+    ...r,
+    roleLabel:   STAFF_ROLE_LABEL[r.role]   ?? r.role,
+    roleSection: STAFF_ROLE_SECTION[r.role] ?? null,
+  }))
+
+  return NextResponse.json(enriched)
 }
 
 export async function POST(req: NextRequest) {
   const session = await auth()
-  const tenantId = (session?.user as any)?.tenantId
-  if (!tenantId || (session?.user as any)?.role !== 'admin') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const tenantId = requireAdmin(session)
+  if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const body = await req.json()
   const { name, email, password, role } = body

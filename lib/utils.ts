@@ -25,3 +25,34 @@ export function formatAddress(address: {
 }): string {
   return `${address.street}, ${address.number} — ${address.neighborhood}`
 }
+
+export interface DeliveryAddress {
+  street:       string
+  number:       string
+  complement?:  string
+  neighborhood: string
+  city?:        string
+  state?:       string
+  cep?:         string
+}
+
+export function parseDeliveryAddress(raw: unknown): DeliveryAddress | null {
+  if (!raw) return null
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
+    const p = parsed as Record<string, unknown>
+    if (!p.street && !p.neighborhood) return null
+    return {
+      street:       String(p.street       ?? ''),
+      number:       String(p.number       ?? ''),
+      complement:   p.complement ? String(p.complement) : undefined,
+      neighborhood: String(p.neighborhood ?? ''),
+      city:         p.city  ? String(p.city)  : undefined,
+      state:        p.state ? String(p.state) : undefined,
+      cep:          p.cep   ? String(p.cep)   : undefined,
+    }
+  } catch {
+    return null
+  }
+}

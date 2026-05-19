@@ -20,8 +20,8 @@ interface Props {
 export function PDVShiftSummary({ cashSession }: Props) {
   const { data, isLoading } = useQuery<ShiftSummary>({
     queryKey: ['pdv-shift-summary', cashSession?.id],
-    queryFn: () => fetch(`/api/pdv/cash-session/${cashSession!.id}/summary`).then(r => r.json()),
-    enabled: !!cashSession,
+    queryFn: () => fetch(`/api/pdv/cash-session/${cashSession?.id}/summary`).then(r => r.json()),
+    enabled: !!cashSession?.id,
     refetchInterval: 20_000,
   })
 

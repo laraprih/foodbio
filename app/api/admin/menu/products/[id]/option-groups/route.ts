@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/session'
 import { getPool } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
@@ -14,7 +15,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  const tenantId = getAdminTenant(session)
+  const tenantId = requireAdmin(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const { id: productId } = await params
@@ -63,7 +64,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  const tenantId = getAdminTenant(session)
+  const tenantId = requireAdmin(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const { id: productId } = await params

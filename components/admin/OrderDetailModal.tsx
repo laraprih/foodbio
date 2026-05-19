@@ -2,53 +2,16 @@
 
 import React from 'react'
 import Modal from '@/components/ui/Modal'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, cn, parseDeliveryAddress } from '@/lib/utils'
+import {
+  ORDER_STATUS_LABEL, ORDER_STATUS_COLOR,
+  PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, PAYMENT_STATUS_COLOR,
+} from '@/lib/constants'
 import {
   MapPin, Phone, CreditCard, ChevronRight, XCircle,
   RotateCcw, User, Truck, Store, Landmark, Clock,
-  CheckCircle2, ChefHat, Package, CheckCircle,
+  CheckCircle2, ChefHat, Package, CheckCircle, TableProperties,
 } from 'lucide-react'
-
-const STATUS_LABELS: Record<string, string> = {
-  pending:   'Pendente',
-  confirmed: 'Confirmado',
-  preparing: 'Preparando',
-  ready:     'Pronto',
-  dispatched:'A caminho',
-  delivered: 'Entregue',
-  cancelled: 'Cancelado',
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  pending:   'bg-gray-100 text-gray-600',
-  confirmed: 'bg-blue-100 text-blue-700',
-  preparing: 'bg-yellow-100 text-yellow-700',
-  ready:     'bg-orange-100 text-orange-700',
-  dispatched:'bg-purple-100 text-purple-700',
-  delivered: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-600',
-}
-
-const PAYMENT_LABELS: Record<string, string> = {
-  pix:         'PIX',
-  credit_card: 'Cartão',
-  cash:        'Dinheiro',
-}
-
-const PAYMENT_STATUS_COLORS: Record<string, string> = {
-  pending:  'text-amber-600 bg-amber-50',
-  approved: 'text-emerald-700 bg-emerald-50',
-  rejected: 'text-red-600 bg-red-50',
-  refunded: 'text-purple-600 bg-purple-50',
-}
-
-const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  pending:  'Aguardando',
-  approved: 'Aprovado',
-  rejected: 'Rejeitado',
-  refunded: 'Estornado',
-}
 
 // ── tracker steps por tipo de pedido ────────────────────────────────────────
 
@@ -69,7 +32,13 @@ const STEPS_PICKUP = [
   { id: 'delivered', label: 'Retirado',   Icon: Store },
 ]
 
-// ── próximos status por tipo ──────────────────────────────────────────────
+const STEPS_INSTORE = [
+  { id: 'pending',   label: 'Recebido',   Icon: Clock },
+  { id: 'confirmed', label: 'Confirmado', Icon: CheckCircle2 },
+  { id: 'preparing', label: 'Preparo',    Icon: ChefHat },
+  { id: 'ready',     label: 'Pronto',     Icon: Package },
+  { id: 'delivered', label: 'Entregue',   Icon: TableProperties },
+]
 
 const NEXT_DELIVERY: Record<string, string> = {
   pending:   'confirmed',
@@ -99,6 +68,11 @@ const NEXT_LABELS_PICKUP: Record<string, string> = {
   delivered: 'Confirmar retirada',
 }
 
+const NEXT_LABELS_INSTORE: Record<string, string> = {
+  ...NEXT_LABELS,
+  delivered: 'Entregar na mesa',
+}
+
 // ── props ─────────────────────────────────────────────────────────────────
 
 interface OrderDetailModalProps {
@@ -121,19 +95,12 @@ export default function OrderDetailModal({
   if (!order) return null
 
   const isDelivery = order.type === 'delivery'
-  const trackerSteps = isDelivery ? STEPS_DELIVERY : STEPS_PICKUP
-  const nextStatusMap = isDelivery ? NEXT_DELIVERY : NEXT_PICKUP
-  const nextLabels    = isDelivery ? NEXT_LABELS   : NEXT_LABELS_PICKUP
+  const isInStore  = order.type === 'in_store'
+  const trackerSteps  = isDelivery ? STEPS_DELIVERY : isInStore ? STEPS_INSTORE : STEPS_PICKUP
+  const nextStatusMap = isDelivery ? NEXT_DELIVERY  : NEXT_PICKUP
+  const nextLabels    = isDelivery ? NEXT_LABELS    : isInStore ? NEXT_LABELS_INSTORE : NEXT_LABELS_PICKUP
 
-  const addr = order.address
-    ? typeof order.address === 'string'
-      ? (() => { try { return JSON.parse(order.address) } catch { return null } })()
-      : order.address
-    : order.deliveryAddress
-      ? typeof order.deliveryAddress === 'string'
-        ? (() => { try { return JSON.parse(order.deliveryAddress) } catch { return null } })()
-        : order.deliveryAddress
-      : null
+  const addr = parseDeliveryAddress(order.address ?? order.deliveryAddress)
 
   const nextStatus = nextStatusMap[order.status]
   const canAdvance = !!nextStatus
@@ -155,8 +122,8 @@ export default function OrderDetailModal({
           <span className="font-black text-gray-900 text-base tracking-tight">
             #{order.id.slice(-8).toUpperCase()}
           </span>
-          <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full', STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-600')}>
-            {STATUS_LABELS[order.status] ?? order.status}
+          <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full', ORDER_STATUS_COLOR[order.status] ?? 'bg-gray-100 text-gray-600')}>
+            {ORDER_STATUS_LABEL[order.status] ?? order.status}
           </span>
           <span className={cn(
             'flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full',
@@ -254,14 +221,14 @@ export default function OrderDetailModal({
                 ? <Landmark className="w-3 h-3 text-emerald-500 shrink-0" />
                 : <CreditCard className="w-3 h-3 text-blue-500 shrink-0" />}
               <span className="text-xs font-bold text-gray-900">
-                {PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}
+                {PAYMENT_METHOD_LABEL[order.paymentMethod] ?? order.paymentMethod}
               </span>
             </div>
             <span className={cn(
               'inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-              PAYMENT_STATUS_COLORS[order.paymentStatus] ?? 'bg-gray-100 text-gray-600'
+              PAYMENT_ORDER_STATUS_COLOR[order.paymentStatus] ?? 'bg-gray-100 text-gray-600'
             )}>
-              {PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus}
+              {PAYMENT_ORDER_STATUS_LABEL[order.paymentStatus] ?? order.paymentStatus}
             </span>
           </div>
         </div>

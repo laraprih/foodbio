@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireStaff } from '@/lib/session'
 import { getPool } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
-
-function getTenantId(session: any): string | null {
-  const user = session?.user as any
-  if (!user || !['admin', 'attendant', 'cook'].includes(user.role) || !user.tenantId) return null
-  return user.tenantId
-}
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
@@ -16,7 +11,7 @@ function todayISO() {
 
 export async function GET(req: NextRequest) {
   const session = await auth()
-  const tenantId = getTenantId(session)
+  const tenantId = requireStaff(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const { searchParams } = req.nextUrl

@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/session'
 import { getPool } from '@/lib/db'
 import { randomUUID } from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
-function getAdminTenantId(session: any): string | null {
-  const user = session?.user as any
-  if (!user || user.role !== 'admin' || !user.tenantId) return null
-  return user.tenantId
-}
-
 export async function GET() {
   const session = await auth()
-  const tenantId = getAdminTenantId(session)
+  const tenantId = requireAdmin(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const pool = getPool()
@@ -52,7 +47,7 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   const session = await auth()
-  const tenantId = getAdminTenantId(session)
+  const tenantId = requireAdmin(session)
   if (!tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const pool = getPool()
