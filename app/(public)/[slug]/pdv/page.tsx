@@ -308,7 +308,13 @@ export default function PDVPage() {
           {activeModule === 'tables' && (
             <PDVTables onSelectTable={handleSelectTable} />
           )}
-          {activeModule === 'orders' && <PDVOrders tenantName={tenantName} />}
+          {activeModule === 'orders' && (
+            <PDVOrders
+              tenantName={tenantName}
+              menu={menuData?.categories ?? []}
+              cashSession={cashSession}
+            />
+          )}
           {activeModule === 'cash' && (
             <PDVCashDrawer
               cashSession={cashSession}

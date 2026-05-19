@@ -114,20 +114,9 @@ export interface CashMovement {
   createdAt: string
 }
 
-export interface PDVOrder {
-  id: string
-  type: string
-  status: string
-  total: number
-  subtotal: number
-  discount: number
-  deliveryFee: number
-  paymentMethod: string | null
-  customerName: string | null
-  customerPhone: string | null
-  tableNumber: number | null
-  createdAt: string
-  items: PDVOrderItem[]
+export interface PDVOrderItemOption {
+  name: string
+  price: number
 }
 
 export interface PDVOrderItem {
@@ -137,6 +126,40 @@ export interface PDVOrderItem {
   unitPrice: number
   totalPrice: number
   notes: string | null
+  options: PDVOrderItemOption[]
+}
+
+export interface PDVOrder {
+  id: string
+  type: string
+  status: string
+  paymentStatus: string
+  total: number
+  subtotal: number
+  discount: number
+  deliveryFee: number
+  paymentMethod: string | null
+  customerName: string | null
+  customerPhone: string | null
+  notes: string | null
+  cancelReason: string | null
+  waiterName: string | null
+  tableNumber: number | null
+  tableId: string | null
+  cashSessionId: string | null
+  deliveryAddress: {
+    cep?: string
+    street?: string
+    number?: string
+    complement?: string
+    neighborhood?: string
+    city?: string
+    state?: string
+  } | null
+  origin: 'pdv' | 'online' | 'garcom'
+  createdAt: string
+  updatedAt: string
+  items: PDVOrderItem[]
 }
 
 export interface ShiftSummary {
