@@ -2,11 +2,12 @@
 
 import React, { useState, useMemo } from 'react'
 import {
-  ClipboardList, Search, Filter, Circle,
+  ClipboardList, Search,
   Bike, Store, UtensilsCrossed, RefreshCw,
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatCurrency } from '@/lib/utils'
+import { useSocket } from '@/hooks/use-socket'
 import { PDVOrderDetail } from './PDVOrderDetail'
 import type { PDVOrder, PDVMenuCategory, CashSession } from './types'
 
@@ -48,16 +49,25 @@ const STATUS_FILTERS = [
 
 interface PDVOrdersProps {
   tenantName?: string
+  tenantId?: string
   menu?: PDVMenuCategory[]
   cashSession?: CashSession | null
 }
 
 export function PDVOrders({
   tenantName = '',
+  tenantId = '',
   menu = [],
   cashSession = null,
 }: PDVOrdersProps) {
   const qc = useQueryClient()
+
+  // Atualização em tempo real: quando MP confirma PIX online, refresh imediato
+  useSocket(tenantId ? `pdv:${tenantId}` : undefined, {
+    'order:confirmed': () => qc.invalidateQueries({ queryKey: ['pdv-orders-today'] }),
+    'order:update':    () => qc.invalidateQueries({ queryKey: ['pdv-orders-today'] }),
+    'table_paid':      () => qc.invalidateQueries({ queryKey: ['pdv-orders-today'] }),
+  })
   const [statusFilter, setStatusFilter] = useState<string>('active')
   const [originFilter, setOriginFilter] = useState<string>('all')
   const [search, setSearch]             = useState('')

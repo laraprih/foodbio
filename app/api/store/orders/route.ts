@@ -3,13 +3,15 @@ import { getPool } from '@/lib/db'
 import { randomUUID } from 'crypto'
 import { serverEmit } from '@/lib/server-emit'
 import { auth } from '@/lib/auth'
-import { decryptMPToken } from '@/lib/decrypt-mp-token'
+import { decryptMPToken, mpWebhookUrl } from '@/lib/decrypt-mp-token'
 
 export const dynamic = 'force-dynamic'
 
 const MP_BASE = 'https://api.mercadopago.com'
 
 async function generatePixQR(accessToken: string, orderId: string, amount: number, payerEmail: string) {
+  const notificationUrl = `${mpWebhookUrl()}/api/webhooks/mercadopago`
+
   const res = await fetch(`${MP_BASE}/v1/payments`, {
     method: 'POST',
     headers: {
@@ -19,9 +21,10 @@ async function generatePixQR(accessToken: string, orderId: string, amount: numbe
     },
     body: JSON.stringify({
       transaction_amount: amount,
-      payment_method_id: 'pix',
+      payment_method_id:  'pix',
       external_reference: orderId,
-      payer: { email: payerEmail || 'cliente@foodbio.com.br' },
+      payer:              { email: payerEmail || 'cliente@foodbio.com.br' },
+      notification_url:   notificationUrl,   // ← CRÍTICO: sem isso MP não dispara webhook
     }),
   })
   const body = await res.json()

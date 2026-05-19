@@ -311,6 +311,7 @@ export default function PDVPage() {
           {activeModule === 'orders' && (
             <PDVOrders
               tenantName={tenantName}
+              tenantId={user?.tenantId ?? ''}
               menu={menuData?.categories ?? []}
               cashSession={cashSession}
             />

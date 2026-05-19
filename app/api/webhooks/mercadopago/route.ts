@@ -197,11 +197,16 @@ export async function POST(req: NextRequest) {
         [orderId]
       )
 
-      // Notifica: cliente acompanhando o pedido + cozinha + admin
+      // Notifica: cliente + cozinha + admin + PDV (para atualizar pedidos em tempo real)
       await serverEmit({
-        rooms: [`order:${orderId}`, `kitchen:${tenantId}`, `admin:${tenantId}`],
+        rooms: [
+          `order:${orderId}`,
+          `kitchen:${tenantId}`,
+          `admin:${tenantId}`,
+          `pdv:${tenantId}`,
+        ],
         event: 'order:confirmed',
-        data: { orderId, status: 'confirmed' },
+        data: { orderId, status: 'confirmed', paymentStatus: 'approved' },
       })
 
       // Envia WhatsApp se o número do cliente estiver verificado
