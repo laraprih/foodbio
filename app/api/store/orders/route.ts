@@ -3,6 +3,7 @@ import { getPool } from '@/lib/db'
 import { randomUUID } from 'crypto'
 import { serverEmit } from '@/lib/server-emit'
 import { auth } from '@/lib/auth'
+import { decryptMPToken } from '@/lib/decrypt-mp-token'
 
 export const dynamic = 'force-dynamic'
 
@@ -156,7 +157,8 @@ export async function POST(req: NextRequest) {
        WHERE "tenantId" = $1 AND gateway = 'mercadopago'`,
       [restaurantId]
     )
-    const accessToken = paRes.rows[0]?.accessToken || process.env.MP_ACCESS_TOKEN
+    const rawToken = paRes.rows[0]?.accessToken
+    const accessToken = rawToken ? decryptMPToken(rawToken) : process.env.MP_ACCESS_TOKEN
 
     if (!accessToken) {
       return NextResponse.json({ error: 'PIX não configurado nesta loja. Configure o Mercado Pago nas configurações.' }, { status: 400 })

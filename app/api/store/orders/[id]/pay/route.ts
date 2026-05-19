@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPool } from '@/lib/db'
 import { randomUUID } from 'crypto'
+import { decryptMPToken } from '@/lib/decrypt-mp-token'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,7 +47,8 @@ export async function POST(
        WHERE "tenantId" = $1 AND gateway = 'mercadopago'`,
       [order.tenantId]
     )
-    const accessToken = paRes.rows[0]?.accessToken || process.env.MP_ACCESS_TOKEN
+    const rawToken = paRes.rows[0]?.accessToken
+    const accessToken = rawToken ? decryptMPToken(rawToken) : process.env.MP_ACCESS_TOKEN
 
     if (!accessToken) {
       return NextResponse.json({ error: 'Gateway não configurado' }, { status: 400 })

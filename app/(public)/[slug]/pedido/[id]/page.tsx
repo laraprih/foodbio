@@ -148,8 +148,15 @@ export default function OrderStatusPage() {
                 ) : pixPending && !order.pixQrCode ? (
                   <div className="flex flex-col items-center gap-3 text-center">
                     <Clock className="w-8 h-8 text-amber-500" />
-                    <p className="text-sm font-bold text-amber-700">QR Code PIX não gerado</p>
-                    <p className="text-xs text-gray-400">O gateway de pagamento não está configurado. Entre em contato com a loja.</p>
+                    <p className="text-sm font-bold text-amber-700">QR Code PIX em processamento</p>
+                    <p className="text-xs text-gray-400">O QR Code está sendo gerado. Aguarde alguns segundos e recarregue a página.</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="mt-1 px-4 py-2 rounded-xl text-xs font-bold text-white"
+                      style={{ backgroundColor: 'var(--color-lime-primary)' }}
+                    >
+                      Recarregar página
+                    </button>
                   </div>
                 ) : null}
               </div>
