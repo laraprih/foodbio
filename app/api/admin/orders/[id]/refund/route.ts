@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { requireAdmin } from '@/lib/session'
 import { getPool } from '@/lib/db'
+import { decryptMPToken } from '@/lib/decrypt-mp-token'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,7 +17,6 @@ export async function POST(
   const { id } = await params
   const pool = getPool()
 
-  // Load order
   const { rows } = await pool.query(
     `SELECT o."externalReference", o."paymentStatus", o."paymentMethod"
      FROM "Order" o
@@ -32,45 +32,46 @@ export async function POST(
     return NextResponse.json({ error: 'Só é possível estornar pagamentos aprovados' }, { status: 400 })
   }
 
-  if (!order.externalReference) {
-    return NextResponse.json({ error: 'ID de pagamento não encontrado para este pedido' }, { status: 400 })
-  }
+  const method = order.paymentMethod ?? ''
+  const needsMpRefund = ['pix', 'credit_card', 'debit_card'].includes(method) && !!order.externalReference
 
-  // Get tenant MP access token
-  const paRes = await pool.query(
-    `SELECT "accessToken" FROM "TenantPaymentAccount"
-     WHERE "tenantId" = $1 AND gateway = 'mercadopago'`,
-    [tenantId]
-  )
-  const accessToken = paRes.rows[0]?.accessToken || process.env.MP_ACCESS_TOKEN
-
-  if (!accessToken) {
-    return NextResponse.json({ error: 'Mercado Pago não configurado' }, { status: 400 })
-  }
-
-  // Call MP refund API
-  const mpRes = await fetch(
-    `https://api.mercadopago.com/v1/payments/${order.externalReference}/refunds`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: '{}',
-    }
-  )
-
-  if (!mpRes.ok) {
-    const body = await mpRes.json()
-    console.error('[refund] MP error:', body)
-    return NextResponse.json(
-      { error: body?.message ?? 'Erro ao processar estorno no Mercado Pago' },
-      { status: 400 }
+  // Pagamentos com MP: chama API de estorno
+  if (needsMpRefund) {
+    const paRes = await pool.query(
+      `SELECT "accessToken" FROM "TenantPaymentAccount"
+       WHERE "tenantId" = $1 AND gateway = 'mercadopago'`,
+      [tenantId]
     )
+    const rawToken    = paRes.rows[0]?.accessToken
+    const accessToken = rawToken ? decryptMPToken(rawToken) : process.env.MP_ACCESS_TOKEN
+
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Mercado Pago não configurado' }, { status: 400 })
+    }
+
+    const mpRes = await fetch(
+      `https://api.mercadopago.com/v1/payments/${order.externalReference}/refunds`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: '{}',
+      }
+    )
+
+    if (!mpRes.ok) {
+      const body = await mpRes.json()
+      console.error('[refund] MP error:', body)
+      return NextResponse.json(
+        { error: body?.message ?? 'Erro ao processar estorno no Mercado Pago' },
+        { status: 400 }
+      )
+    }
   }
 
-  // Update order payment status
+  // Atualiza DB em todos os casos (dinheiro, PDV manual, garçom, MP)
   await pool.query(
     `UPDATE "Order" SET "paymentStatus" = 'refunded', "updatedAt" = NOW() WHERE id = $1`,
     [id]
@@ -81,5 +82,8 @@ export async function POST(
     [id]
   )
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({
+    ok: true,
+    mpRefund: needsMpRefund,  // indica se o estorno foi processado no MP ou só no DB
+  })
 }
