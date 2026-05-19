@@ -11,6 +11,7 @@ import { GarcomTableGrid } from '@/components/garcom/GarcomTableGrid'
 import { GarcomTableDetail } from '@/components/garcom/GarcomTableDetail'
 import { GarcomCatalog } from '@/components/garcom/GarcomCatalog'
 import { GarcomOrderSummary } from '@/components/garcom/GarcomOrderSummary'
+import { GarcomBillModal } from '@/components/garcom/GarcomBillModal'
 
 import type {
   GarcomView, GarcomTable, GarcomTableDetail as GarcomTableDetailType,
@@ -19,6 +20,12 @@ import type {
 
 import { GARCOM_POLL_MS } from '@/lib/constants'
 
+interface PixInfo {
+  pixKey: string | null
+  name: string
+  city: string
+}
+
 export default function GarcomPage() {
   const params = useParams()
   const slug = params.slug as string
@@ -26,11 +33,12 @@ export default function GarcomPage() {
 
   const { user, status, logout } = useSectionAuth('garcom')
 
-  const [view, setView] = useState<GarcomView>('tables')
+  const [view, setView]                   = useState<GarcomView>('tables')
   const [selectedTable, setSelectedTable] = useState<GarcomTable | null>(null)
-  const [cart, setCart] = useState<CartItem[]>([])
+  const [cart, setCart]                   = useState<CartItem[]>([])
+  const [showBill, setShowBill]           = useState(false)
 
-  // ── Tenant info ────────────────────────────────────────────────────────────
+  // ── Tenant info ─────────────────────────────────────────────────────────────
   const { data: tenantData } = useQuery<{ tenant: { name: string } }>({
     queryKey: ['garcom-tenant'],
     queryFn: () => fetch('/api/garcom/tenant').then(r => r.json()),
@@ -39,7 +47,15 @@ export default function GarcomPage() {
   })
   const tenantName = tenantData?.tenant?.name ?? user?.tenantName ?? ''
 
-  // ── Tables ─────────────────────────────────────────────────────────────────
+  // ── PIX info ────────────────────────────────────────────────────────────────
+  const { data: pixData } = useQuery<PixInfo>({
+    queryKey: ['garcom-pix'],
+    queryFn: () => fetch('/api/garcom/pix').then(r => r.json()),
+    enabled: status === 'authenticated',
+    staleTime: 10 * 60_000,
+  })
+
+  // ── Tables ──────────────────────────────────────────────────────────────────
   const { data: tablesData, isLoading: tablesLoading } = useQuery<{ tables: GarcomTable[] }>({
     queryKey: ['garcom-tables'],
     queryFn: () => fetch('/api/garcom/tables').then(r => r.json()),
@@ -48,7 +64,7 @@ export default function GarcomPage() {
   })
   const tables = tablesData?.tables ?? []
 
-  // ── Table detail ───────────────────────────────────────────────────────────
+  // ── Table detail ─────────────────────────────────────────────────────────────
   const {
     data: tableDetail,
     isLoading: detailLoading,
@@ -60,7 +76,7 @@ export default function GarcomPage() {
     refetchInterval: GARCOM_POLL_MS,
   })
 
-  // ── Menu ───────────────────────────────────────────────────────────────────
+  // ── Menu ─────────────────────────────────────────────────────────────────────
   const { data: menuData, isLoading: menuLoading } = useQuery<{ categories: GarcomCategory[] }>({
     queryKey: ['garcom-menu'],
     queryFn: () => fetch('/api/garcom/menu').then(r => r.json()),
@@ -69,7 +85,7 @@ export default function GarcomPage() {
   })
   const categories = menuData?.categories ?? []
 
-  // ── Send order mutation ─────────────────────────────────────────────────────
+  // ── Enviar pedido ────────────────────────────────────────────────────────────
   const sendOrder = useMutation({
     mutationFn: async () => {
       if (!selectedTable) throw new Error('Nenhuma mesa selecionada')
@@ -87,10 +103,7 @@ export default function GarcomPage() {
           })),
         }),
       })
-      if (!res.ok) {
-        const body = await res.json()
-        throw new Error(body.error ?? 'Erro ao enviar pedido')
-      }
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao enviar pedido')
       return res.json()
     },
     onSuccess: () => {
@@ -100,66 +113,55 @@ export default function GarcomPage() {
       qc.invalidateQueries({ queryKey: ['garcom-tables'] })
       qc.invalidateQueries({ queryKey: ['garcom-table', selectedTable?.id] })
     },
-    onError: (err: Error) => {
-      toast.error(err.message)
-    },
+    onError: (err: Error) => toast.error(err.message),
   })
 
-  // ── Request bill mutation ──────────────────────────────────────────────────
-  const requestBill = useMutation({
-    mutationFn: async () => {
-      if (!selectedTable) throw new Error('Nenhuma mesa selecionada')
-      const res = await fetch(`/api/garcom/tables/${selectedTable.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'waiting_payment' }),
-      })
-      if (!res.ok) throw new Error('Erro ao solicitar conta')
-    },
-    onSuccess: () => {
-      toast.success('Conta solicitada! PDV notificado.')
-      qc.invalidateQueries({ queryKey: ['garcom-tables'] })
-      qc.invalidateQueries({ queryKey: ['garcom-table', selectedTable?.id] })
-    },
-    onError: (err: Error) => {
-      toast.error(err.message)
-    },
-  })
-
-  // ── Cart handlers ──────────────────────────────────────────────────────────
-  const addToCart = useCallback((item: CartItem) => {
-    setCart(prev => [...prev, item])
-  }, [])
-
-  const updateQty = useCallback((cartId: string, qty: number) => {
-    if (qty <= 0) {
-      setCart(prev => prev.filter(i => i.cartId !== cartId))
-    } else {
-      setCart(prev => prev.map(i => i.cartId === cartId ? { ...i, quantity: qty } : i))
+  // ── Confirmar pagamento (checkout) ────────────────────────────────────────────
+  const handleConfirmPayment = useCallback(async (method: string) => {
+    if (!selectedTable) throw new Error('Nenhuma mesa selecionada')
+    const res = await fetch('/api/garcom/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tableId: selectedTable.id, paymentMethod: method }),
+    })
+    if (!res.ok) {
+      const body = await res.json()
+      throw new Error(body.error ?? 'Erro ao processar pagamento')
     }
+    // Sucesso: atualiza todo o sistema
+    qc.invalidateQueries({ queryKey: ['garcom-tables'] })
+    qc.invalidateQueries({ queryKey: ['garcom-table', selectedTable.id] })
+    toast.success('Pagamento confirmado! Mesa liberada.')
+  }, [selectedTable, qc])
+
+  const handleBillPaid = useCallback(() => {
+    setShowBill(false)
+    setSelectedTable(null)
+    setView('tables')
   }, [])
 
-  const removeItem = useCallback((cartId: string) => {
-    setCart(prev => prev.filter(i => i.cartId !== cartId))
+  // ── Cart handlers ─────────────────────────────────────────────────────────────
+  const addToCart    = useCallback((item: CartItem) => setCart(prev => [...prev, item]), [])
+  const updateQty    = useCallback((cartId: string, qty: number) => {
+    setCart(prev => qty <= 0
+      ? prev.filter(i => i.cartId !== cartId)
+      : prev.map(i => i.cartId === cartId ? { ...i, quantity: qty } : i)
+    )
   }, [])
+  const removeItem   = useCallback((cartId: string) => setCart(prev => prev.filter(i => i.cartId !== cartId)), [])
 
-  // ── Navigation ──────────────────────────────────────────────────────────────
+  // ── Navegação ─────────────────────────────────────────────────────────────────
   const handleSelectTable = useCallback((table: GarcomTable) => {
     setSelectedTable(table)
     setView('table-detail')
   }, [])
 
   const handleBack = useCallback(() => {
-    if (view === 'catalog' || view === 'cart') {
-      setView('table-detail')
-    } else {
-      setSelectedTable(null)
-      setCart([])
-      setView('tables')
-    }
+    if (view === 'catalog' || view === 'cart') setView('table-detail')
+    else { setSelectedTable(null); setCart([]); setView('tables') }
   }, [view])
 
-  // ── Auth guard ──────────────────────────────────────────────────────────────
+  // ── Auth guard ────────────────────────────────────────────────────────────────
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -169,66 +171,50 @@ export default function GarcomPage() {
   }
 
   if (status === 'unauthenticated') {
-    if (typeof window !== 'undefined') {
-      window.location.href = `/${slug}/garcom/login`
-    }
+    if (typeof window !== 'undefined') window.location.href = `/${slug}/garcom/login`
     return null
   }
 
-  // ── Navbar props ────────────────────────────────────────────────────────────
   const navbarTitle =
     view === 'table-detail' ? `Mesa ${selectedTable?.number ?? ''}` :
     view === 'catalog'      ? 'Cardápio' :
-    view === 'cart'         ? 'Pedido' : undefined
-
-  const navbarBack =
-    view !== 'tables'
-      ? handleBack
-      : undefined
-
-  const navbarBackLabel =
-    (view === 'catalog' || view === 'cart') ? `Mesa ${selectedTable?.number ?? ''}` : 'Mesas'
+    view === 'cart'         ? 'Pedido'   : undefined
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <GarcomNavbar
         tenantName={tenantName}
         waiterName={user?.name ?? ''}
-        onBack={navbarBack}
-        backLabel={navbarBackLabel}
+        onBack={view !== 'tables' ? handleBack : undefined}
+        backLabel={(view === 'catalog' || view === 'cart') ? `Mesa ${selectedTable?.number ?? ''}` : 'Mesas'}
         title={navbarTitle}
         onLogout={logout}
       />
 
       <main className="flex-1 flex flex-col">
-        {/* ── Tables grid ──────────────────────────────────────────────── */}
+        {/* Mesas */}
         {view === 'tables' && (
           <>
             <div className="px-4 pt-4 pb-2">
               <h2 className="text-lg font-black text-gray-900">Mesas</h2>
               <p className="text-xs text-gray-400 mt-0.5">Toque para ver ou lançar pedido</p>
             </div>
-            <GarcomTableGrid
-              tables={tables}
-              onSelectTable={handleSelectTable}
-              isLoading={tablesLoading}
-            />
+            <GarcomTableGrid tables={tables} onSelectTable={handleSelectTable} isLoading={tablesLoading} />
           </>
         )}
 
-        {/* ── Table detail ──────────────────────────────────────────────── */}
+        {/* Detalhe da mesa */}
         {view === 'table-detail' && selectedTable && (
           <GarcomTableDetail
             detail={tableDetail ?? null}
             isLoading={detailLoading}
             onAddItems={() => setView('catalog')}
-            onRequestBill={() => requestBill.mutate()}
+            onOpenBill={() => setShowBill(true)}
             onRefresh={() => refetchDetail()}
-            isRequestingBill={requestBill.isPending}
           />
         )}
 
-        {/* ── Catalog ──────────────────────────────────────────────────── */}
+        {/* Catálogo */}
         {view === 'catalog' && (
           <GarcomCatalog
             categories={categories}
@@ -240,7 +226,7 @@ export default function GarcomPage() {
           />
         )}
 
-        {/* ── Cart / Order summary ──────────────────────────────────────── */}
+        {/* Carrinho */}
         {view === 'cart' && selectedTable && (
           <GarcomOrderSummary
             cart={cart}
@@ -253,6 +239,18 @@ export default function GarcomPage() {
           />
         )}
       </main>
+
+      {/* Modal de conta + pagamento */}
+      {showBill && selectedTable && tableDetail && (
+        <GarcomBillModal
+          table={selectedTable}
+          orders={tableDetail.orders}
+          pendingTotal={tableDetail.pendingTotal}
+          pixInfo={pixData ?? null}
+          onClose={() => setShowBill(false)}
+          onConfirm={handleConfirmPayment}
+        />
+      )}
     </div>
   )
 }

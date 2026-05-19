@@ -1,27 +1,25 @@
 'use client'
 
 import React from 'react'
-import { Plus, Receipt, Clock, RefreshCw } from 'lucide-react'
+import { Plus, Receipt, Clock, RefreshCw, Wallet } from 'lucide-react'
 import { formatCurrency, formatOrderTime } from '@/lib/utils'
 import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/lib/constants'
-import type { GarcomTableDetail, GarcomTable } from './types'
+import type { GarcomTableDetail } from './types'
 
 interface GarcomTableDetailProps {
   detail: GarcomTableDetail | null
   isLoading: boolean
   onAddItems: () => void
-  onRequestBill: () => void
+  onOpenBill: () => void
   onRefresh: () => void
-  isRequestingBill: boolean
 }
 
 export function GarcomTableDetail({
   detail,
   isLoading,
   onAddItems,
-  onRequestBill,
+  onOpenBill,
   onRefresh,
-  isRequestingBill,
 }: GarcomTableDetailProps) {
   if (isLoading || !detail) {
     return (
@@ -34,20 +32,16 @@ export function GarcomTableDetail({
   }
 
   const { table, orders, pendingTotal } = detail
-  const allItems = orders.flatMap(o => o.items ?? [])
   const hasOrders = orders.length > 0
-  const isWaitingPayment = table.status === 'waiting_payment'
 
   return (
     <div className="flex flex-col h-full">
       {/* Status da mesa */}
       <div className="px-4 pt-4 pb-2">
         <div className={`rounded-2xl p-4 border-2 ${
-          isWaitingPayment
-            ? 'bg-amber-50 border-amber-300'
-            : hasOrders
-              ? 'bg-emerald-50 border-emerald-200'
-              : 'bg-gray-50 border-gray-200'
+          hasOrders
+            ? 'bg-emerald-50 border-emerald-200'
+            : 'bg-gray-50 border-gray-200'
         }`}>
           <div className="flex items-center justify-between">
             <div>
@@ -60,17 +54,12 @@ export function GarcomTableDetail({
               <p className="text-2xl font-black text-gray-900">
                 {formatCurrency(pendingTotal)}
               </p>
-              {isWaitingPayment && (
-                <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
-                  Aguardando pagamento
-                </span>
-              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Lista de itens agrupados por pedido */}
+      {/* Lista de pedidos */}
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
         {!hasOrders ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
@@ -101,7 +90,7 @@ export function GarcomTableDetail({
                       <p className="text-sm font-medium text-gray-900 leading-tight">{item.name}</p>
                       {item.options?.length ? (
                         <p className="text-xs text-gray-400 mt-0.5">
-                          {item.options.map(o => o.name).join(', ')}
+                          {item.options.map((o: any) => o.name).join(', ')}
                         </p>
                       ) : null}
                       {item.notes && (
@@ -145,20 +134,14 @@ export function GarcomTableDetail({
           </button>
         </div>
 
-        {hasOrders && !isWaitingPayment && (
+        {hasOrders && (
           <button
-            onClick={onRequestBill}
-            disabled={isRequestingBill}
-            className="w-full h-11 rounded-xl font-semibold text-sm border-2 border-amber-400 text-amber-700 bg-amber-50 active:scale-95 transition-all disabled:opacity-60"
+            onClick={onOpenBill}
+            className="w-full h-12 rounded-xl font-bold text-sm border-2 border-gray-900 text-gray-900 bg-white flex items-center justify-center gap-2 active:scale-95 transition-all"
           >
-            {isRequestingBill ? 'Aguarde...' : 'Pedir conta'}
+            <Wallet className="w-4 h-4" />
+            Fechar conta — {formatCurrency(pendingTotal)}
           </button>
-        )}
-
-        {isWaitingPayment && (
-          <div className="w-full h-11 rounded-xl flex items-center justify-center text-sm font-semibold text-amber-600 bg-amber-50 border-2 border-amber-300">
-            Aguardando pagamento no caixa
-          </div>
         )}
       </div>
     </div>
