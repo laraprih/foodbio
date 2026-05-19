@@ -1,5 +1,8 @@
 import React from 'react'
-import { Clock, CheckCircle, AlertCircle, UtensilsCrossed, Bike, ShoppingBag } from 'lucide-react'
+import {
+  Clock, CheckCircle2, XCircle, AlertTriangle,
+  UtensilsCrossed, Bike, ShoppingBag, ChevronRight,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getElapsedMinutes } from '@/lib/utils'
 import { TIMING } from '@/lib/constants'
@@ -7,10 +10,11 @@ import type { Order } from '@/types'
 
 interface KDSCardProps {
   order: Order
-  isReadyColumn: boolean
+  column: 'confirmed' | 'preparing' | 'ready'
   onAdvance: (id: string) => void
   onServedAtTable: (id: string) => void
   onCancel: (id: string) => void
+  isPending?: boolean
 }
 
 const TYPE_ICON: Record<string, React.ElementType> = {
@@ -25,111 +29,156 @@ const TYPE_LABEL: Record<string, string> = {
   pickup:   'Retirada',
 }
 
-export default function KDSCard({ order, isReadyColumn, onAdvance, onServedAtTable, onCancel }: KDSCardProps) {
-  const elapsed   = getElapsedMinutes(order.createdAt)
-  const isLate    = elapsed > TIMING.KDS_LATE_MINUTES
-  // Detecta pedido de mesa: type === 'in_store' OU tableId preenchido (pedidos do garçom)
+// Cor da borda esquerda + accent por coluna
+const COL_ACCENT: Record<string, { border: string; badge: string; badgeText: string }> = {
+  confirmed: { border: 'border-l-blue-500',    badge: 'bg-blue-500',    badgeText: 'NOVO' },
+  preparing: { border: 'border-l-amber-400',   badge: 'bg-amber-400',   badgeText: 'PREPARO' },
+  ready:     { border: 'border-l-emerald-400', badge: 'bg-emerald-400', badgeText: 'PRONTO' },
+}
+
+function timerColor(elapsed: number, isLate: boolean) {
+  if (isLate)     return 'text-red-400'
+  if (elapsed > 10) return 'text-amber-400'
+  return 'text-emerald-400'
+}
+
+export default function KDSCard({
+  order, column, onAdvance, onServedAtTable, onCancel, isPending,
+}: KDSCardProps) {
+  const elapsed    = getElapsedMinutes(order.createdAt)
+  const isLate     = elapsed > TIMING.KDS_LATE_MINUTES
   const isInStore  = (order as any).type === 'in_store' || !!(order as any).tableId
   const tableNum   = (order as any).tableNumber
   const waiterName = (order as any).waiterName
-
-  const orderType = isInStore ? 'in_store' : ((order as any).type ?? 'pickup')
-  const TypeIcon  = TYPE_ICON[orderType] ?? ShoppingBag
+  const orderType  = isInStore ? 'in_store' : ((order as any).type ?? 'pickup')
+  const TypeIcon   = TYPE_ICON[orderType] ?? ShoppingBag
+  const accent     = COL_ACCENT[column] ?? COL_ACCENT.confirmed
+  const isReady    = column === 'ready'
 
   return (
     <div className={cn(
-      'bg-white rounded-3xl border-2 flex flex-col overflow-hidden transition-all',
-      isLate ? 'border-red-200 shadow-red-100 shadow-lg' : 'border-gray-100 shadow-sm'
+      'rounded-2xl border-l-4 bg-zinc-800 overflow-hidden flex flex-col',
+      'shadow-lg transition-all duration-200',
+      accent.border,
+      isLate && 'ring-2 ring-red-500/60 animate-pulse-border',
     )}>
-      {/* Header */}
-      <div className={cn('px-4 py-3 flex items-center justify-between', isLate ? 'bg-red-50' : 'bg-gray-50')}>
-        <div className="flex items-center gap-2">
-          <span className="text-base font-black text-gray-900">#{order.id.slice(-4)}</span>
-          <TypeIcon className="w-3.5 h-3.5 text-gray-400" />
-          <span className="text-xs font-bold text-gray-500">
-            {isInStore && tableNum ? `Mesa ${tableNum}` : TYPE_LABEL[(order as any).type ?? 'pickup']}
+
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/80">
+        <div className="flex items-center gap-2 min-w-0">
+          {/* Status badge */}
+          <span className={cn(
+            'text-[9px] font-black px-1.5 py-0.5 rounded tracking-widest shrink-0',
+            accent.badge, 'text-white'
+          )}>
+            {accent.badgeText}
           </span>
-          {isLate && <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />}
+
+          {/* Type + table */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <TypeIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            <span className="text-sm font-black text-white truncate">
+              {isInStore && tableNum ? `Mesa ${tableNum}` : TYPE_LABEL[orderType]}
+            </span>
+            {(order as any).customerName && !isInStore && (
+              <span className="text-xs text-zinc-500 truncate hidden sm:block">
+                · {(order as any).customerName}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 text-gray-500 font-bold text-xs">
+
+        {/* Timer */}
+        <div className={cn(
+          'flex items-center gap-1.5 shrink-0 font-black text-sm',
+          timerColor(elapsed, isLate)
+        )}>
+          {isLate && <AlertTriangle className="w-3.5 h-3.5 animate-pulse" />}
           <Clock className="w-3.5 h-3.5" />
-          {elapsed} min
+          <span>{elapsed}min</span>
         </div>
       </div>
 
-      {/* Garçom responsável — exibido só para pedidos de mesa */}
+      {/* Garçom */}
       {isInStore && waiterName && (
-        <div className="px-4 py-1.5 bg-lime-50 border-b border-lime-100 flex items-center gap-1.5">
-          <UtensilsCrossed className="w-3 h-3 text-lime-600" />
-          <span className="text-xs font-semibold text-lime-700">{waiterName}</span>
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-lime-900/40 border-b border-lime-700/30">
+          <UtensilsCrossed className="w-3 h-3 text-lime-400 shrink-0" />
+          <span className="text-xs font-semibold text-lime-300 truncate">{waiterName}</span>
         </div>
       )}
 
-      {/* Itens */}
-      <div className="flex-1 p-4 space-y-3">
+      {/* ── Itens ──────────────────────────────────────────────── */}
+      <div className="flex-1 px-4 py-3 space-y-3">
         {order.items.map((item, idx) => (
           <div key={idx} className="flex items-start gap-3">
-            <span className="w-7 h-7 bg-black text-[var(--color-lime-primary)] rounded-lg flex items-center justify-center font-black text-xs shrink-0">
-              {item.quantity}
+            {/* Qty badge */}
+            <span className="shrink-0 min-w-[32px] h-8 rounded-lg flex items-center justify-center font-black text-sm bg-zinc-700 text-white">
+              {item.quantity}×
             </span>
-            <div>
-              <p className="font-bold text-gray-900 leading-tight text-sm">{item.product?.name ?? (item as any).name}</p>
-              {item.options?.map((o, oIdx) => (
-                <p key={oIdx} className="text-[10px] text-gray-400 font-medium">+ {o.name}</p>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0 pt-0.5">
+              <p className="font-bold text-white text-sm leading-snug">
+                {item.product?.name ?? (item as any).name}
+              </p>
+              {item.options?.map((o, i) => (
+                <p key={i} className="text-xs text-zinc-400 mt-0.5">
+                  + {o.name}
+                </p>
               ))}
               {(item as any).notes && (
-                <p className="text-[10px] text-amber-600 italic mt-0.5">"{(item as any).notes}"</p>
+                <p className="text-xs text-amber-400 italic mt-1 flex items-start gap-1">
+                  <span className="shrink-0">⚠</span>
+                  <span>"{(item as any).notes}"</span>
+                </p>
               )}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Ações */}
-      <div className="p-3 bg-gray-50/50 border-t border-gray-100">
-        {/* Coluna "Prontos" + pedido de mesa → botão "Servido na Mesa" */}
-        {isReadyColumn && isInStore ? (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => onCancel(order.id)}
-              className="py-2.5 rounded-xl border border-gray-200 text-gray-400 font-bold text-xs hover:bg-white hover:text-red-500 transition-colors"
-            >
-              Cancelar
-            </button>
+      {/* ── Ações ──────────────────────────────────────────────── */}
+      <div className="px-3 pb-3 pt-2 space-y-2">
+        {isReady ? (
+          isInStore ? (
+            /* Mesa pronta: Servido na Mesa */
             <button
               onClick={() => onServedAtTable(order.id)}
-              className="py-2.5 rounded-xl bg-lime-500 text-white font-bold text-xs hover:bg-lime-600 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              disabled={isPending}
+              className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 transition-all disabled:opacity-50 font-black text-sm text-white"
             >
-              <CheckCircle className="w-3.5 h-3.5" />
-              Servido ✓
+              <CheckCircle2 className="w-4 h-4" />
+              Servido na Mesa
             </button>
-          </div>
+          ) : (
+            /* Pickup/Delivery prontos */
+            <div className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-emerald-900/60 border border-emerald-700/50 text-emerald-300 font-bold text-sm">
+              <CheckCircle2 className="w-4 h-4" />
+              Aguardando retirada
+            </div>
+          )
         ) : (
-          /* Colunas normais (confirmar→preparar e preparar→pronto) */
-          <div className={isReadyColumn ? 'flex' : 'grid grid-cols-2 gap-2'}>
-            {!isReadyColumn && (
-              <button
-                onClick={() => onCancel(order.id)}
-                className="py-2.5 rounded-xl border border-gray-200 text-gray-400 font-bold text-xs hover:bg-white hover:text-red-500 transition-colors"
-              >
-                Cancelar
-              </button>
-            )}
-            {/* Na coluna "Prontos" para delivery/pickup: mostra badge informativo */}
-            {isReadyColumn ? (
-              <div className="w-full py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs text-center">
-                ✓ Aguardando retirada
-              </div>
-            ) : (
-              <button
-                onClick={() => onAdvance(order.id)}
-                className="py-2.5 rounded-xl bg-black text-[var(--color-lime-primary)] font-bold text-xs hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-1.5"
-              >
-                <CheckCircle className="w-3.5 h-3.5" />
-                Avançar →
-              </button>
-            )}
-          </div>
+          /* Colunas Novos e Em Preparo: botão de avanço */
+          <button
+            onClick={() => onAdvance(order.id)}
+            disabled={isPending}
+            className="w-full flex items-center justify-center gap-2 h-11 rounded-xl font-black text-sm active:scale-95 transition-all disabled:opacity-50 bg-white text-zinc-900 hover:bg-zinc-100"
+          >
+            {column === 'confirmed' ? 'Iniciar Preparo' : 'Marcar Pronto'}
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Cancelar — só nas colunas Novos e Em Preparo */}
+        {!isReady && (
+          <button
+            onClick={() => onCancel(order.id)}
+            disabled={isPending}
+            className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl text-xs font-semibold text-zinc-500 hover:text-red-400 hover:bg-zinc-700 active:scale-95 transition-all disabled:opacity-50 border border-zinc-700"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            Cancelar pedido
+          </button>
         )}
       </div>
     </div>
