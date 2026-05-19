@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
        o.id, o.status, o.type, o.total, o.subtotal, o."deliveryFee",
        o."paymentMethod", o."customerName", o."customerPhone",
        o."deliveryAddress", o."createdAt", o."updatedAt",
-       o."cashSessionId",
+       o."cashSessionId", o."tableId", o."waiterName",
        tab.number AS "tableNumber",
        CASE WHEN o."cashSessionId" IS NOT NULL THEN 'pdv' ELSE 'online' END AS origin
      FROM "Order" o

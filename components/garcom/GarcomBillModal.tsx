@@ -82,7 +82,12 @@ export function GarcomBillModal({
         body: JSON.stringify({ tableId: table.id }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Erro ao gerar PIX')
+      if (!res.ok) {
+        // Mostra detalhe do erro do MercadoPago quando disponível
+        const mpDetail = data.detail?.message ?? data.detail?.error ?? ''
+        const msg = mpDetail ? `${data.error}: ${mpDetail}` : (data.error ?? 'Erro ao gerar PIX')
+        throw new Error(msg)
+      }
       setPixPayment(data)
     } catch (err: any) {
       setPixError(err.message ?? 'Falha ao criar cobrança PIX')

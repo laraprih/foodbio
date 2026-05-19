@@ -32,9 +32,13 @@ export default function KDSBoard({ tenantId }: KDSBoardProps) {
     },
   })
 
+  // Usa Next.js route diretamente — garante tableId, waiterName e type corretos
   const { data: rawOrders, isLoading } = useQuery({
     queryKey: ['kds-orders', tenantId],
-    queryFn: () => get<Order[]>(`/bff/api/kitchen/orders`),
+    queryFn: () =>
+      fetch('/api/kitchen/orders')
+        .then(r => r.json())
+        .then(d => Array.isArray(d) ? d : []),
     refetchInterval: POLL.KDS,
   })
   const orders: Order[] = Array.isArray(rawOrders) ? rawOrders : []

@@ -70,8 +70,8 @@ export async function POST(req: NextRequest) {
   const externalReference = `garcom-table-${tableId}`
   const notificationUrl   = `${mpWebhookUrl()}/api/webhooks/mercadopago`
 
-  // E-mail do pagador (MP exige, não aparece para o cliente)
-  const payerEmail = `mesa${tableNumber}@${session.tenantId.slice(0, 8)}.foodbio`
+  // E-mail do pagador (MP exige campo válido, não aparece para o cliente final)
+  const payerEmail = `garcom@foodbio.app`
 
   const mpRes = await fetch(`${MP_BASE}/v1/payments`, {
     method: 'POST',

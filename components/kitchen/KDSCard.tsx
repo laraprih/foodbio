@@ -28,11 +28,13 @@ const TYPE_LABEL: Record<string, string> = {
 export default function KDSCard({ order, isReadyColumn, onAdvance, onServedAtTable, onCancel }: KDSCardProps) {
   const elapsed   = getElapsedMinutes(order.createdAt)
   const isLate    = elapsed > TIMING.KDS_LATE_MINUTES
-  const isInStore = (order as any).type === 'in_store'
-  const tableNum  = (order as any).tableNumber
+  // Detecta pedido de mesa: type === 'in_store' OU tableId preenchido (pedidos do garçom)
+  const isInStore  = (order as any).type === 'in_store' || !!(order as any).tableId
+  const tableNum   = (order as any).tableNumber
   const waiterName = (order as any).waiterName
 
-  const TypeIcon = TYPE_ICON[(order as any).type ?? 'pickup'] ?? ShoppingBag
+  const orderType = isInStore ? 'in_store' : ((order as any).type ?? 'pickup')
+  const TypeIcon  = TYPE_ICON[orderType] ?? ShoppingBag
 
   return (
     <div className={cn(
@@ -103,27 +105,30 @@ export default function KDSCard({ order, isReadyColumn, onAdvance, onServedAtTab
             </button>
           </div>
         ) : (
-          /* Colunas normais ou pedidos não-mesa */
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => onCancel(order.id)}
-              className="py-2.5 rounded-xl border border-gray-200 text-gray-400 font-bold text-xs hover:bg-white hover:text-red-500 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={() => onAdvance(order.id)}
-              disabled={isReadyColumn && !isInStore}
-              className={cn(
-                'py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5',
-                isReadyColumn && !isInStore
-                  ? 'bg-gray-200 text-gray-400 cursor-default'
-                  : 'bg-black text-[var(--color-lime-primary)] hover:opacity-90 active:scale-95'
-              )}
-            >
-              <CheckCircle className="w-3.5 h-3.5" />
-              {isReadyColumn ? 'Pronto' : 'Avançar →'}
-            </button>
+          /* Colunas normais (confirmar→preparar e preparar→pronto) */
+          <div className={isReadyColumn ? 'flex' : 'grid grid-cols-2 gap-2'}>
+            {!isReadyColumn && (
+              <button
+                onClick={() => onCancel(order.id)}
+                className="py-2.5 rounded-xl border border-gray-200 text-gray-400 font-bold text-xs hover:bg-white hover:text-red-500 transition-colors"
+              >
+                Cancelar
+              </button>
+            )}
+            {/* Na coluna "Prontos" para delivery/pickup: mostra badge informativo */}
+            {isReadyColumn ? (
+              <div className="w-full py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs text-center">
+                ✓ Aguardando retirada
+              </div>
+            ) : (
+              <button
+                onClick={() => onAdvance(order.id)}
+                className="py-2.5 rounded-xl bg-black text-[var(--color-lime-primary)] font-bold text-xs hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                Avançar →
+              </button>
+            )}
           </div>
         )}
       </div>
