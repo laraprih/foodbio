@@ -216,7 +216,7 @@ export default function PedidosPage() {
               className="p-2 hover:bg-gray-50 transition-colors disabled:opacity-30"
               title="Próximo dia"
             >
-              <ChevronRightIcon className="w-4 h-4 text-gray-500" />
+              <ChevronRight className="w-4 h-4 text-gray-500" />
             </button>
           </div>
         )}
@@ -382,9 +382,9 @@ export default function PedidosPage() {
                   </span>
                   <span className={cn(
                     'text-xs font-bold px-2 py-0.5 rounded-full',
-                    STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-600'
+                    ORDER_STATUS_COLOR[order.status] ?? 'bg-gray-100 text-gray-600'
                   )}>
-                    {STATUS_LABELS[order.status] ?? order.status}
+                    {ORDER_STATUS_LABEL[order.status] ?? order.status}
                   </span>
                   <span className={cn(
                     'text-[10px] font-bold px-2 py-0.5 rounded-full',
