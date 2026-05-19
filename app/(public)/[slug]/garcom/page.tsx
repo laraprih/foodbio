@@ -21,12 +21,6 @@ import type {
 
 import { GARCOM_POLL_MS } from '@/lib/constants'
 
-interface PixInfo {
-  pixKey: string | null
-  name: string
-  city: string
-}
-
 export default function GarcomPage() {
   const params = useParams()
   const slug = params.slug as string
@@ -36,6 +30,16 @@ export default function GarcomPage() {
 
   // Notificações em tempo real via socket
   useSocket(user?.tenantId ? `garcom:${user.tenantId}` : undefined, {
+    table_paid: (data: any) => {
+      // Webhook MP confirmou pagamento → fechar modal e liberar mesa
+      if (data.tableId === selectedTable?.id || data.tableNumber === selectedTable?.number) {
+        setShowBill(false)
+        setSelectedTable(null)
+        setView('tables')
+        toast.success(`Mesa ${data.tableNumber} paga via PIX ✓`, { duration: 5000 })
+      }
+      qc.invalidateQueries({ queryKey: ['garcom-tables'] })
+    },
     order_ready_for_table: (data: any) => {
       toast(`🍽️ ${data.message ?? `Mesa ${data.tableNumber} está pronta!`}`, {
         duration: 8000,
@@ -73,14 +77,6 @@ export default function GarcomPage() {
     staleTime: 10 * 60_000,
   })
   const tenantName = tenantData?.tenant?.name ?? user?.tenantName ?? ''
-
-  // ── PIX info ────────────────────────────────────────────────────────────────
-  const { data: pixData } = useQuery<PixInfo>({
-    queryKey: ['garcom-pix'],
-    queryFn: () => fetch('/api/garcom/pix').then(r => r.json()),
-    enabled: status === 'authenticated',
-    staleTime: 10 * 60_000,
-  })
 
   // ── Tables ──────────────────────────────────────────────────────────────────
   const { data: tablesData, isLoading: tablesLoading } = useQuery<{ tables: GarcomTable[] }>({
@@ -273,7 +269,6 @@ export default function GarcomPage() {
           table={selectedTable}
           orders={tableDetail.orders}
           pendingTotal={tableDetail.pendingTotal}
-          pixInfo={pixData ?? null}
           onClose={() => setShowBill(false)}
           onConfirm={handleConfirmPayment}
         />

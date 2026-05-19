@@ -97,10 +97,80 @@ export async function POST(req: NextRequest) {
   const payment = await fetchMPPayment(paymentId, accessToken)
   if (!payment) return NextResponse.json({ ok: true })
 
-  const orderId: string = payment.external_reference
-  const mpStatus: string = payment.status // approved | pending | rejected | cancelled | refunded
+  const externalRef: string = payment.external_reference ?? ''
+  const mpStatus: string    = payment.status
 
-  if (!orderId) return NextResponse.json({ ok: true })
+  if (!externalRef) return NextResponse.json({ ok: true })
+
+  // ── Pagamento de mesa pelo garçom ─────────────────────────────────────────
+  if (externalRef.startsWith('garcom-table-')) {
+    const tableId = externalRef.replace('garcom-table-', '')
+
+    if (mpStatus === 'approved') {
+      const client = await pool.connect()
+      try {
+        await client.query('BEGIN')
+
+        // Baixa todos os pedidos pendentes da mesa
+        const { rows: updatedOrders } = await client.query(
+          `UPDATE "Order"
+           SET "paymentStatus" = 'approved',
+               "paymentMethod" = 'pix',
+               status          = 'delivered',
+               "updatedAt"     = NOW()
+           WHERE "tableId"      = $1
+             AND "paymentStatus" = 'pending'
+             AND status         != 'cancelled'
+           RETURNING id, "tenantId", total`,
+          [tableId]
+        )
+
+        if (updatedOrders.length > 0) {
+          const tenantId    = updatedOrders[0].tenantId as string
+          const totalPaid   = updatedOrders.reduce((s: number, o: any) => s + Number(o.total), 0)
+          const tableRes    = await client.query(
+            `UPDATE "Table" SET status = 'free' WHERE id = $1 RETURNING number`,
+            [tableId]
+          )
+          const tableNumber = tableRes.rows[0]?.number
+
+          await client.query('COMMIT')
+
+          // Notifica todo o sistema
+          await serverEmit({
+            rooms: [
+              `garcom:${tenantId}`,
+              `admin:${tenantId}`,
+              `pdv:${tenantId}`,
+              `kitchen:${tenantId}`,
+            ],
+            event: 'table_paid',
+            data: {
+              tableId,
+              tableNumber,
+              paymentMethod: 'pix',
+              totalPaid,
+              ordersUpdated: updatedOrders.length,
+              source: 'mercadopago',
+            },
+          })
+        } else {
+          await client.query('ROLLBACK')
+        }
+      } catch (err) {
+        await client.query('ROLLBACK')
+        console.error('[webhook/mp] garcom table payment error:', err)
+      } finally {
+        client.release()
+      }
+    }
+
+    console.info(`[webhook/mp] garcom table=${tableId} payment=${paymentId} status=${mpStatus}`)
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Pagamento normal de pedido online ─────────────────────────────────────
+  const orderId = externalRef
 
   if (mpStatus === 'approved') {
     const { rowCount } = await pool.query(

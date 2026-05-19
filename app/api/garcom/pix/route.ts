@@ -4,24 +4,108 @@ import { getWaiterSession } from '@/lib/waiter-auth'
 
 export const dynamic = 'force-dynamic'
 
-// GET /api/garcom/pix — retorna dados PIX do restaurante para gerar QR code
-export async function GET(req: NextRequest) {
+const MP_BASE = 'https://api.mercadopago.com'
+
+// POST /api/garcom/pix — cria cobrança PIX no MercadoPago para a mesa
+export async function POST(req: NextRequest) {
   const session = await getWaiterSession(req)
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
+  let body: any
+  try { body = await req.json() } catch {
+    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+  }
+
+  const { tableId } = body
+  if (!tableId) return NextResponse.json({ error: 'tableId obrigatório' }, { status: 400 })
+
   const pool = getPool()
-  const { rows } = await pool.query(
-    `SELECT name, phone, city FROM "Tenant" WHERE id = $1`,
+
+  // Busca mesa + tenant
+  const { rows: tableRows } = await pool.query(
+    `SELECT t.number, ten.name AS "tenantName", ten.phone AS "tenantPhone", ten.city
+     FROM "Table" t
+     JOIN "Tenant" ten ON ten.id = t."tenantId"
+     WHERE t.id = $1 AND t."tenantId" = $2 AND t.active = true`,
+    [tableId, session.tenantId]
+  )
+  if (!tableRows.length) return NextResponse.json({ error: 'Mesa não encontrada' }, { status: 404 })
+  const { number: tableNumber, tenantName, tenantPhone } = tableRows[0]
+
+  // Soma todos os pedidos pendentes da mesa
+  const { rows: orderRows } = await pool.query(
+    `SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS qty
+     FROM "Order"
+     WHERE "tableId"      = $1
+       AND "tenantId"     = $2
+       AND "paymentStatus" = 'pending'
+       AND status         != 'cancelled'`,
+    [tableId, session.tenantId]
+  )
+  const total = Number(orderRows[0]?.total ?? 0)
+  if (total <= 0) return NextResponse.json({ error: 'Sem pedidos pendentes para cobrar' }, { status: 400 })
+
+  // Busca access token do MP do restaurante
+  const { rows: paRows } = await pool.query(
+    `SELECT "accessToken" FROM "TenantPaymentAccount"
+     WHERE "tenantId" = $1 AND gateway = 'mercadopago'`,
     [session.tenantId]
   )
+  const accessToken = paRows[0]?.accessToken ?? process.env.MP_ACCESS_TOKEN
+  if (!accessToken) {
+    return NextResponse.json({ error: 'MercadoPago não configurado para este restaurante' }, { status: 422 })
+  }
 
-  if (!rows.length) return NextResponse.json({ error: 'Restaurante não encontrado' }, { status: 404 })
+  // External reference identifica o pagamento como garçom + mesa
+  const externalReference = `garcom-table-${tableId}`
+  const notificationUrl = process.env.MP_WEBHOOK_URL
+    ?? `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.foodbio.app'}/api/webhooks/mercadopago`
 
-  const { name, phone, city } = rows[0]
+  // Cria cobrança PIX no MP
+  const mpRes = await fetch(`${MP_BASE}/v1/payments`, {
+    method: 'POST',
+    headers: {
+      Authorization:       `Bearer ${accessToken}`,
+      'Content-Type':      'application/json',
+      'X-Idempotency-Key': `${externalReference}-${Date.now()}`,
+    },
+    body: JSON.stringify({
+      transaction_amount: parseFloat(total.toFixed(2)),
+      payment_method_id:  'pix',
+      payer: {
+        email: tenantPhone
+          ? `mesa${tableNumber}@${tenantPhone.replace(/\D/g, '')}.pix`
+          : `mesa${tableNumber}@${session.tenantId}.pix`,
+      },
+      description:        `Mesa ${tableNumber} — ${tenantName}`,
+      external_reference: externalReference,
+      notification_url:   notificationUrl,
+    }),
+    signal: AbortSignal.timeout(15_000),
+  })
+
+  if (!mpRes.ok) {
+    const err = await mpRes.json().catch(() => ({}))
+    console.error('[garcom/pix] MP error:', err)
+    return NextResponse.json(
+      { error: 'Erro ao gerar cobrança PIX no MercadoPago', detail: err },
+      { status: 502 }
+    )
+  }
+
+  const mp = await mpRes.json()
+  const txData = mp.point_of_interaction?.transaction_data
+
+  if (!txData?.qr_code) {
+    return NextResponse.json({ error: 'MercadoPago não retornou QR code PIX' }, { status: 502 })
+  }
 
   return NextResponse.json({
-    pixKey: phone ?? null,   // telefone como chave PIX (ex: +5511999999999)
-    name:   name  ?? '',
-    city:   city  ?? 'Brasil',
+    paymentId:     String(mp.id),
+    total,
+    qrCode:        txData.qr_code,          // copia-e-cola (string PIX)
+    qrCodeBase64:  txData.qr_code_base64,   // imagem PNG em base64
+    tableNumber,
+    externalReference,
   })
 }
