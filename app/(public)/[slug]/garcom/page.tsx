@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSectionAuth } from '@/hooks/use-section-auth'
@@ -68,6 +68,41 @@ export default function GarcomPage() {
   const [selectedTable, setSelectedTable] = useState<GarcomTable | null>(null)
   const [cart, setCart]                   = useState<CartItem[]>([])
   const [showBill, setShowBill]           = useState(false)
+
+  // Refs para acessar estado atual dentro do listener de popstate sem stale closure
+  const viewRef     = useRef(view)
+  const showBillRef = useRef(showBill)
+  useEffect(() => { viewRef.current     = view },     [view])
+  useEffect(() => { showBillRef.current = showBill }, [showBill])
+
+  // Intercepta o botão voltar do Android: nunca deixa sair para o login,
+  // navega pelo stack interno do app (cart → catalog → table-detail → tables)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    // Injeta um estado extra para que o primeiro "voltar" dispare popstate
+    // em vez de sair da página imediatamente
+    history.pushState({ garcom: true }, '')
+
+    const onPopState = () => {
+      // Re-injeta estado para manter o app "preso" na página
+      history.pushState({ garcom: true }, '')
+
+      if (showBillRef.current) {
+        setShowBill(false)
+        return
+      }
+
+      const v = viewRef.current
+      if (v === 'cart')          { setView('catalog');      return }
+      if (v === 'catalog')       { setView('table-detail'); return }
+      if (v === 'table-detail')  { setSelectedTable(null); setCart([]); setView('tables') }
+      // v === 'tables' → não faz nada, permanece no app
+    }
+
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, []) // executa só uma vez no mount
 
   // ── Tenant info ─────────────────────────────────────────────────────────────
   const { data: tenantData } = useQuery<{ tenant: { name: string } }>({
