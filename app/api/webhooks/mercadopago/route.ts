@@ -3,6 +3,7 @@ import { getPool } from '@/lib/db'
 import { createHmac } from 'crypto'
 import { serverEmit } from '@/lib/server-emit'
 import { sendOrderConfirmation, normalizeWhatsAppPhone } from '@/lib/whatsapp'
+import { decryptMPToken } from '@/lib/decrypt-mp-token'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,7 +87,9 @@ export async function POST(req: NextRequest) {
        WHERE "tenantId" = $1 AND gateway = 'mercadopago'`,
       [tenantId]
     )
-    if (paRes.rows[0]?.accessToken) accessToken = paRes.rows[0].accessToken
+    if (paRes.rows[0]?.accessToken) {
+      accessToken = decryptMPToken(paRes.rows[0].accessToken)
+    }
   }
 
   if (!accessToken) {
